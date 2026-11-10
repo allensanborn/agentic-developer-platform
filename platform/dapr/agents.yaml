@@ -1,0 +1,55 @@
+# What Dapr gives agents: durable workflow state behind a portable API. The agent code
+# talks to "statestore"; that it is DynamoDB is this file's business, and swapping the
+# backing service (Postgres, Cosmos DB, Redis) is a change here with no code change.
+#
+# floci accepts any credentials, so these are dummies. On AWS, delete the Secret and the
+# two key fields: the sidecar picks up the pod's IAM role (IRSA / Pod Identity), scoped to
+# this one table.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-credentials
+  namespace: agents
+stringData:
+  access-key: test
+  secret-key: test
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: agents
+spec:
+  type: state.aws.dynamodb
+  version: v1
+  metadata:
+    - name: table
+      value: adp-agent-state
+    - name: region
+      value: us-east-1
+    - name: endpoint
+      value: http://floci.aws.svc.cluster.local:4566
+    - name: accessKey
+      secretKeyRef:
+        name: aws-credentials
+        key: access-key
+    - name: secretKey
+      secretKeyRef:
+        name: aws-credentials
+        key: secret-key
+    - name: actorStateStore # workflows are built on actors
+      value: "true"
+# Only this app's sidecar loads the component.
+scopes:
+  - research-agent
+---
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: agents
+  namespace: agents
+spec:
+  # No other app may invoke an agent unless a policy here says so.
+  accessControl:
+    defaultAction: deny
+    trustDomain: public

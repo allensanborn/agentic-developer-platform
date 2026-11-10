@@ -1,4 +1,14 @@
-# Agent Instructions
+# Agentic developer platform
+
+Read `README.md` first. Working rules for this repo:
+
+- `scripts/up.sh` is the only bootstrap; keep it idempotent. Every external version goes in `versions.env`; every image is pinned by digest.
+- A change is done when `scripts/smoke.sh` and `dagger call check` both pass. A new security control gets a smoke check, and every deny check keeps an allow check beside it.
+- Workloads must pass Pod Security `restricted`. No credential in git, argv or an agent's environment.
+- Scratch files go in `.scratch/` (gitignored), never a system temp directory.
+- Record decisions in `docs/adr/`; record an unmitigated risk in `docs/threat-model.md` and in beads.
+
+## Issue tracking
 
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 

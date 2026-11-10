@@ -1,0 +1,61 @@
+# The agent tenant namespace. An agent here holds no credential except its own identity:
+# it cannot reach a model provider, a local model, or the internet, only the gateway.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: research-agent
+  namespace: agents
+automountServiceAccountToken: false
+---
+# A second identity with fewer rights: allowed local models, not hosted ones (gateway/auth.yaml).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: intern
+  namespace: agents
+automountServiceAccountToken: false
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: agents
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-egress
+  namespace: agents
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to: # DNS
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - {port: 53, protocol: UDP}
+        - {port: 53, protocol: TCP}
+    - to: # the AI gateway
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: ai-gateway
+      ports:
+        - port: 8080
+    - to: # Dapr control plane: identity (sentry), placement, scheduler, operator
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dapr-system
+    - to: # AWS APIs, used by the Dapr sidecar's state store
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: aws
+      ports:
+        - port: 4566

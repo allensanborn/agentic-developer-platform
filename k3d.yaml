@@ -1,0 +1,16 @@
+# k3d, not kind: k3s ships a NetworkPolicy controller (kube-router), kindnet ignores
+# NetworkPolicy, and the isolation in platform/ depends on it being enforced.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+servers: 1
+agents: 1
+options:
+  k3s:
+    extraArgs:
+      # Nothing here uses Traefik, and it installs its own Gateway API CRDs.
+      - arg: --disable=traefik
+        nodeFilters: [server:*]
+  kubeconfig:
+    # scripts/env.sh points KUBECONFIG at a repo-local file; the user's own stays untouched.
+    updateDefaultKubeconfig: false
+    switchCurrentContext: false

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.20.0/.schema/devbox.schema.json",
+  "packages": [
+    "k3d@5.9.0",
+    "kubectl@1.35",
+    "kubernetes-helm@3.20",
+    "jq@1.8",
+    "docker-client@latest"
+  ],
+  "shell": {
+    "scripts": {
+      "up": "scripts/up.sh",
+      "smoke": "scripts/smoke.sh",
+      "check": "dagger -s call check",
+      "down": "k3d cluster delete adp && rm -f .kubeconfig"
+    }
+  }
+}

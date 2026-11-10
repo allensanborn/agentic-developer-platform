@@ -1,0 +1,118 @@
+# floci: an AWS emulator, standing in for the AWS account. Everything that talks to it uses
+# the stock AWS APIs (Secrets Manager, DynamoDB), so moving to real AWS is an endpoint and
+# credential change: drop the endpoint override and swap static keys for IRSA / Pod Identity.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: floci-data
+  namespace: aws
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: floci
+  namespace: aws
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: floci
+  template:
+    metadata:
+      labels:
+        app: floci
+    spec:
+      automountServiceAccountToken: false
+      # A Service named `floci` makes Kubernetes inject FLOCI_PORT=tcp://..., which floci
+      # reads as its own port setting and refuses to start.
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: floci
+          image: floci/floci:2.4.0@sha256:5ee85db604c4aa74ac76e07ea5cc83086f37bb472bf3dbb97e34019e48efae9c
+          env:
+            # The image defaults to in-memory state; secrets must survive a restart.
+            - name: FLOCI_STORAGE_MODE
+              value: persistent
+            - name: FLOCI_STORAGE_PERSISTENT_PATH
+              value: /data
+            - name: FLOCI_HOSTNAME
+              value: floci.aws.svc.cluster.local
+          ports:
+            - containerPort: 4566
+          readinessProbe:
+            httpGet:
+              path: /_localstack/health
+              port: 4566
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: floci-data
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: floci
+  namespace: aws
+spec:
+  selector:
+    app: floci
+  ports:
+    - port: 4566
+---
+# Who may reach "AWS": External Secrets (provider keys), agent sidecars (Dapr state), and
+# the admin pods scripts/aws.sh starts in this namespace. No egress at all.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: floci
+  namespace: aws
+spec:
+  podSelector:
+    matchLabels:
+      app: floci
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: external-secrets
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+        - podSelector:
+            matchLabels:
+              app: aws-admin
+      ports:
+        - port: 4566

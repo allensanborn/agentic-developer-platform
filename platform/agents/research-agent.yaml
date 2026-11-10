@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: research-agent
+  namespace: agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: research-agent
+  template:
+    metadata:
+      labels:
+        app: research-agent
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: research-agent
+        dapr.io/config: agents
+        # The sidecar gets no Kubernetes API token and no secret-reading path at all;
+        # components resolve their secretKeyRefs through the Dapr operator.
+        dapr.io/disable-builtin-k8s-secret-store: "true"
+    spec:
+      serviceAccountName: research-agent
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          # Built and imported by scripts/up.sh; CI builds the same Dockerfile with Dagger.
+          image: adp/research-agent:dev
+          imagePullPolicy: Never
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: ai-gateway-token
+              mountPath: /var/run/secrets/ai-gateway
+              readOnly: true
+      volumes:
+        # The agent's only credential: its own identity, valid for the gateway and nothing
+        # else (audience), for an hour, rotated by the kubelet.
+        - name: ai-gateway-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: ai-gateway
+                  expirationSeconds: 3600
+                  path: token

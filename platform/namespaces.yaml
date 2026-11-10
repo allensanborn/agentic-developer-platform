@@ -1,0 +1,33 @@
+# Pod Security Admission is enforced per namespace. `restricted` everywhere a workload we
+# write runs; the charts' own namespaces (envoy-gateway-system, dapr-system,
+# external-secrets) are created by helm and keep the charts' defaults.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-gateway
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: models
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aws
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agents
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    # Grants network access to the AI gateway (platform/gateway/networkpolicy.yaml).
+    # Reaching it is not enough to use it: every route also requires an allow-listed identity.
+    adp.dev/ai-gateway-client: "true"

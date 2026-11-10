@@ -1,0 +1,140 @@
+# Small local models, served inside the cluster so the only path to them is the gateway.
+# On a Mac this is CPU inference (Docker cannot reach the GPU); fine for 1-3B models.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+  namespace: models
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: models
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # one writer on the model volume
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ollama
+          image: ollama/ollama:0.40.16@sha256:910d0d8107b538fb0894e63163eb195de0cc7aefcbc666dc62d3b18f71124592
+          # Serve, then pull the models routes.yaml names. Readiness waits for all of them.
+          command: [/bin/sh, -c]
+          args:
+            - |
+              ollama serve &
+              until ollama list >/dev/null 2>&1; do sleep 1; done
+              for m in $MODELS; do ollama pull "$m" || exit 1; done
+              wait
+          env:
+            - name: MODELS
+              value: llama3.2:1b llama3.2:3b
+            - name: OLLAMA_HOST
+              value: 0.0.0.0:11434
+            - name: OLLAMA_MODELS
+              value: /models
+            - name: HOME
+              value: /models
+            # One request at a time per model; the gateway is where callers queue.
+            - name: OLLAMA_NUM_PARALLEL
+              value: "1"
+          ports:
+            - containerPort: 11434
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - for m in $MODELS; do ollama show "$m" >/dev/null || exit 1; done
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+            limits:
+              memory: 6Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: models
+              mountPath: /models
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: ollama-models
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: models
+spec:
+  selector:
+    app: ollama
+  ports:
+    - port: 11434
+---
+# Ingress: the gateway's data plane only. Egress: DNS and HTTPS, for model pulls.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ollama
+  namespace: models
+spec:
+  podSelector:
+    matchLabels:
+      app: ollama
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: ai-gateway
+      ports:
+        - port: 11434
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - {port: 53, protocol: UDP}
+        - {port: 53, protocol: TCP}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16]
+      ports:
+        - port: 443

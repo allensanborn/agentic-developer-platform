@@ -1,0 +1,33 @@
+# Who is calling, and how much they may spend. Applied by scripts/up.sh, which fills in
+# __CLUSTER_JWKS__ (the API server's token-signing public keys); agentgateway takes JWKS
+# inline or from a URL, not from a ConfigMap.
+#
+# Callers present their Kubernetes ServiceAccount token (projected, audience `ai-gateway`,
+# an hour's life, rotated by the kubelet) as the bearer token. There is no shared key to
+# leak or rotate, and the identity is the workload. Which aliases an identity may use is
+# decided per alias in models.yaml; with no matching Allow rule a request is denied.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: caller-identity
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+  traffic:
+    jwtAuthentication:
+      mode: Strict
+      providers:
+        - issuer: https://kubernetes.default.svc.cluster.local
+          audiences: [ai-gateway]
+          jwks:
+            inline: '__CLUSTER_JWKS__'
+    # Token budget per identity. Counted after each response, so it stops the next
+    # request, not the one that crosses the line. Buckets are per proxy replica.
+    rateLimit:
+      local:
+        - tokens: 50000
+          unit: Hours
+          key: jwt.sub

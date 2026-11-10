@@ -1,0 +1,4 @@
+# mTLS between sidecars is on by default (Sentry issues each app a SPIFFE identity).
+dapr_sidecar_injector:
+  # Needed for the injected sidecar to pass the `restricted` Pod Security level.
+  sidecarDropALLCapabilities: true

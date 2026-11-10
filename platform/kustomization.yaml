@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespaces.yaml
+  - gateway/gateway.yaml
+  - gateway/models.yaml
+  - gateway/networkpolicy.yaml
+  - models/ollama.yaml
+  - agents/base.yaml
+  - agents/research-agent.yaml
+  - aws/floci.yaml
+  - secrets/provider-keys.yaml
+  - dapr/agents.yaml

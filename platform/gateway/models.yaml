@@ -1,0 +1,137 @@
+# The model catalogue. Two layers:
+#
+#   Internal models  one per real model at one provider. Not requestable by clients.
+#                    Each says which identities may reach it; anyone else is denied.
+#   Public aliases   what agents ask for: a capability (`fast`, `smart`), never a model id.
+#                    Each says where it routes. (agentgateway does not allow policies on
+#                    an alias, so access is decided on the models behind it.)
+#
+# Changing the model behind an alias, or moving it to another provider, is a reviewed
+# change to this file and nothing else: no agent code, image or config changes.
+#
+# --- Internal: local models (Ollama in the cluster; no credential)
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: llama-1b
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  visibility: Internal
+  provider: OpenAI
+  baseURL: http://ollama.models.svc.cluster.local:11434/v1
+  policies:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions: # any one may match
+          - 'jwt.sub == "system:serviceaccount:agents:research-agent"'
+          - 'jwt.sub == "system:serviceaccount:agents:intern"'
+    transformations:
+      - field: model
+        expression: '"llama3.2:1b"'
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: llama-3b
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  visibility: Internal
+  provider: OpenAI
+  baseURL: http://ollama.models.svc.cluster.local:11434/v1
+  policies:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - 'jwt.sub == "system:serviceaccount:agents:research-agent"'
+    transformations:
+      - field: model
+        expression: '"llama3.2:3b"'
+---
+# --- Internal: hosted model (OpenRouter). The gateway attaches the API key; the Secret is
+# synced from AWS Secrets Manager (platform/secrets/) and exists only in this namespace.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: openrouter-gpt-oss
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  visibility: Internal
+  provider: OpenAI
+  baseURL: https://openrouter.ai/api/v1
+  policies:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - 'jwt.sub == "system:serviceaccount:agents:research-agent"'
+    auth:
+      secretRef:
+        name: openrouter-apikey # read from the Secret's `Authorization` key
+    transformations:
+      - field: model
+        expression: '"openai/gpt-oss-20b:free"'
+    # Down, throttling or rejecting our credential all count as unhealthy: stop sending
+    # traffic here for a minute and let the alias fail over.
+    health:
+      unhealthyCondition: "response.code >= 500 || response.code == 429 || response.code == 401 || response.code == 403"
+      eviction:
+        consecutiveFailures: 1
+        duration: 60s
+---
+# --- Public alias: fast. Local only.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: fast
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  virtualModel:
+    weighted:
+      targets:
+        - modelRef:
+            name: llama-1b
+          weight: 1
+---
+# --- Public alias: smart. Hosted first, local when the provider is unhealthy.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: smart
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  virtualModel:
+    failover:
+      targets:
+        - modelRef:
+            name: openrouter-gpt-oss
+          priority: 0
+        - modelRef:
+            name: llama-3b
+          priority: 1

@@ -1,0 +1,46 @@
+# agentgateway is the one gateway for agent traffic: models today, MCP tools and A2A next,
+# all under the same identity and policy model.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayParameters
+metadata:
+  name: ai-gateway
+  namespace: ai-gateway
+spec:
+  service:
+    spec:
+      type: ClusterIP # in-cluster callers only; the chart default is LoadBalancer
+  # The generated pod sets everything the `restricted` Pod Security level needs except a
+  # seccomp profile. Without this the pod is rejected, while the Gateway still reports
+  # Programmed=True.
+  deployment:
+    spec:
+      template:
+        spec:
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+---
+# The data plane is a Deployment and Service named after the Gateway, in its namespace:
+#   http://ai-gateway.ai-gateway.svc.cluster.local:8080
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ai-gateway
+  namespace: ai-gateway
+spec:
+  gatewayClassName: agentgateway
+  infrastructure:
+    parametersRef:
+      group: agentgateway.dev
+      kind: AgentgatewayParameters
+      name: ai-gateway
+  listeners:
+    - name: llm
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
+        kinds:
+          - group: agentgateway.dev
+            kind: AgentgatewayModel
