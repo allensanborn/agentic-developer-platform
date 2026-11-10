@@ -96,7 +96,7 @@ func (m *Ci) Scan(
 	trivy := dag.Container().From(trivyImage).
 		WithMountedCache("/root/.cache/trivy", dag.CacheVolume("trivy-db")).
 		WithDirectory("/src", src.WithoutDirectory(".git")).WithWorkdir("/src")
-	fail := []string{"--exit-code", "1", "--severity", "HIGH,CRITICAL", "--no-progress"}
+	fail := []string{"--exit-code", "1", "--severity", "HIGH,CRITICAL", "--quiet"}
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error { // secrets, across the full git history
