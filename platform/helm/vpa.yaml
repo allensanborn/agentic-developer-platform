@@ -1,0 +1,5 @@
+# Chart defaults: recommender watches usage, updater applies it, admission controller sets
+# requests on new pods. InPlaceOrRecreate (no feature gate at this version) resizes a running
+# pod without a restart where the node allows it.
+# ponytail: history lives in the recommender (checkpointed in-cluster); add Prometheus as a
+# history source if recommendations must survive long outages or span weeks.

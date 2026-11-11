@@ -21,6 +21,8 @@ h agentgateway oci://ghcr.io/agentgateway/charts/agentgateway \
 h external-secrets oci://ghcr.io/external-secrets/charts/external-secrets \
   --version "$EXTERNAL_SECRETS_VERSION" -n external-secrets --create-namespace \
   -f platform/helm/external-secrets.yaml
+h vpa vpa --repo https://charts.fairwinds.com/stable --version "$VPA_CHART_VERSION" \
+  -n vpa --create-namespace -f platform/helm/vpa.yaml
 h dapr dapr --repo https://dapr.github.io/helm-charts --version "$DAPR_VERSION" \
   -n dapr-system --create-namespace -f platform/helm/dapr.yaml
 

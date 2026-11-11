@@ -11,3 +11,4 @@ resources:
   - aws/floci.yaml
   - secrets/provider-keys.yaml
   - dapr/agents.yaml
+  - autoscaling/vpa.yaml

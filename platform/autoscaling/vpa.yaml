@@ -1,0 +1,202 @@
+# Right-sizing for every platform workload. Requests only (controlledValues): VPA's default
+# also rescales limits in proportion, which would shrink ollama's 6Gi limit to nothing and
+# OOM-kill it once a model loads. min/max bound what VPA may choose; the floor keeps an idle
+# workload schedulable and the ceiling keeps a runaway from taking the node.
+# One replica of anything here is not highly available; VPA evicts only in mode Recreate or
+# when an in-place resize is refused. Initial = stateful or slow to restart, never evicted.
+# kube-system (coredns, metrics-server) is k3s-managed and left alone.
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: research-agent
+  namespace: agents
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: research-agent}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 25m, memory: 64Mi}
+        maxAllowed: {cpu: "2", memory: 1Gi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ai-gateway
+  namespace: ai-gateway
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: ai-gateway}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 25m, memory: 64Mi}
+        maxAllowed: {cpu: "2", memory: 1Gi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: agentgateway
+  namespace: agentgateway-system
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: agentgateway}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 25m, memory: 64Mi}
+        maxAllowed: {cpu: "2", memory: 1Gi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: floci
+  namespace: aws
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: floci}
+  updatePolicy: {updateMode: Initial}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 25m, memory: 64Mi}
+        maxAllowed: {cpu: "2", memory: 2Gi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ollama
+  namespace: models
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: ollama}
+  updatePolicy: {updateMode: Initial}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 100m, memory: 64Mi}
+        maxAllowed: {cpu: "4", memory: 8Gi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dapr-operator
+  namespace: dapr-system
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: dapr-operator}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 10m, memory: 32Mi}
+        maxAllowed: {cpu: "1", memory: 512Mi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dapr-sentry
+  namespace: dapr-system
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: dapr-sentry}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 10m, memory: 32Mi}
+        maxAllowed: {cpu: "1", memory: 512Mi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dapr-sidecar-injector
+  namespace: dapr-system
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: dapr-sidecar-injector}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 10m, memory: 32Mi}
+        maxAllowed: {cpu: "1", memory: 512Mi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dapr-placement-server
+  namespace: dapr-system
+spec:
+  targetRef: {apiVersion: apps/v1, kind: StatefulSet, name: dapr-placement-server}
+  updatePolicy: {updateMode: Initial}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 10m, memory: 32Mi}
+        maxAllowed: {cpu: "1", memory: 512Mi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dapr-scheduler-server
+  namespace: dapr-system
+spec:
+  targetRef: {apiVersion: apps/v1, kind: StatefulSet, name: dapr-scheduler-server}
+  updatePolicy: {updateMode: Initial}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 10m, memory: 64Mi}
+        maxAllowed: {cpu: "1", memory: 1Gi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: external-secrets
+  namespace: external-secrets
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: external-secrets}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 10m, memory: 32Mi}
+        maxAllowed: {cpu: "1", memory: 512Mi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: external-secrets-cert-controller
+  namespace: external-secrets
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: external-secrets-cert-controller}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 10m, memory: 32Mi}
+        maxAllowed: {cpu: "1", memory: 512Mi}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: external-secrets-webhook
+  namespace: external-secrets
+spec:
+  targetRef: {apiVersion: apps/v1, kind: Deployment, name: external-secrets-webhook}
+  updatePolicy: {updateMode: InPlaceOrRecreate}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "*"
+        controlledValues: RequestsOnly
+        minAllowed: {cpu: 10m, memory: 32Mi}
+        maxAllowed: {cpu: "1", memory: 512Mi}
