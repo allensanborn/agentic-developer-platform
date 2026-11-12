@@ -9,7 +9,8 @@ docker build -q -t adp/erp:dev erp/app
 docker build -q -t adp/chinook:dev erp/db
 k3d image import -c "$CLUSTER" adp/erp:dev adp/chinook:dev
 
-kubectl apply -f platform/aws/floci.yaml # lets the erp namespace reach the state store
+# Onboarding this tenant is two platform edits: reach the state store, and be allow-listed for models.
+kubectl apply -f platform/aws/floci.yaml -f platform/gateway/models.yaml
 
 aws() { scripts/aws.sh "$@" </dev/null; }
 aws dynamodb describe-table --table-name erp-workflow-state >/dev/null 2>&1 ||

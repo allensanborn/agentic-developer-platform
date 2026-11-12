@@ -62,7 +62,7 @@ def handle_discrepancy(ctx: wf.DaprWorkflowContext, inp: dict):
         )
         if check.get("resolves"):
             proposal = {"run": ctx.instance_id, "rule": rule, "key": key, **fix,
-                        "evidence": d.get("evidence", ""), "attempt": attempt}
+                        "evidence": d.get("evidence", ""), "model": d.get("model"), "attempt": attempt}
             break
         rejected.append({**fix, "error": check.get("error") or "does not resolve the discrepancy"})
     if proposal is None:

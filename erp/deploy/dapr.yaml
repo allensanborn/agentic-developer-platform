@@ -51,6 +51,22 @@ spec:
 scopes:
   - erp-executor
 ---
+# The agent's read path: a role that can select and nothing else, loaded by its sidecar alone.
+# ponytail: a binding, not MCP tools behind the gateway; see ADR 0010 for why and when to change.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: erp-read
+  namespace: erp
+spec:
+  type: bindings.postgresql
+  version: v1
+  metadata:
+    - name: connectionString
+      secretKeyRef: {name: erp-db, key: reader-url}
+scopes:
+  - erp-agent
+---
 apiVersion: dapr.io/v1alpha1
 kind: Configuration
 metadata:

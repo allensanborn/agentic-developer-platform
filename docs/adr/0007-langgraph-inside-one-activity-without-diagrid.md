@@ -1,6 +1,6 @@
 # 7. LangGraph runs inside one activity; no Diagrid package, no checkpointer
 
-Status: accepted, 2026-11-12. The diagnosis graph is not built yet; the agent is a stub.
+Status: accepted, 2026-11-12. The graph is built and unit-tested with a scripted model. It has not completed a run against a real model: the in-cluster CPU models generate under one token per second on this machine.
 
 ## Context
 

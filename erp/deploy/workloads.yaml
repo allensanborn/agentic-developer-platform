@@ -77,6 +77,7 @@ spec:
       labels:
         app: erp-agent
         adp.dev/dapr-app: "true"
+        adp.dev/erp-db-client: "true"
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: erp-agent
@@ -100,12 +101,25 @@ spec:
               cpu: 50m
               memory: 128Mi
             limits:
-              memory: 256Mi
+              memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
+          volumeMounts:
+            - name: ai-gateway-token
+              mountPath: /var/run/secrets/ai-gateway
+              readOnly: true
+      volumes:
+        # Its identity at the AI gateway: valid there only, for an hour, rotated by the kubelet.
+        - name: ai-gateway-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: ai-gateway
+                  expirationSeconds: 3600
+                  path: token
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -130,6 +144,7 @@ spec:
       labels:
         app: erp-executor
         adp.dev/dapr-app: "true"
+        adp.dev/erp-db-client: "true"
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: erp-executor

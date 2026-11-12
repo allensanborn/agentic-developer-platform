@@ -80,7 +80,7 @@ flowchart LR
 |---|---|
 | A fix is applied only after a named approver approves that exact proposal | Approving a different proposal, or as nobody, changes nothing; a valid approval commits and the audit row names the approver |
 | Rejection and "fixed by other means" apply nothing | Both end the run without a commit |
-| Only the executor can reach the database | The agent and controller cannot open a connection |
+| Only the executor and the agent can reach the database, each as its own role | The controller cannot open a connection |
 | A hijacked agent cannot commit | The agent's code is replaced with a direct call to `commit`; the executor's sidecar refuses it |
 
 ```bash
@@ -89,7 +89,11 @@ scripts/erp-up.sh     # this tenant
 scripts/erp-smoke.sh
 ```
 
-Built so far: the three workloads, access policies, typed fixes enforced by database roles, approval bound to a proposal hash, deadlines with escalation. Not built yet: the model (the agent is a stub that always proposes one fix type), the Drasi trigger, Keycloak-verified approvers, and the eval gate.
+Built so far: the three workloads, access policies, typed fixes enforced by database roles, approval bound to a proposal hash, deadlines with escalation, and the LangGraph diagnosis graph (gather facts, model chooses a declared fix, validate).
+
+Not working yet: a run against a real model. The in-cluster CPU models generate under one token per second on the development machine, so a diagnosis times out and `scripts/erp-smoke.sh` cannot pass until a faster model is routed (a hosted provider key, or a GPU-backed local model). The smoke test last passed with a stub agent at commit `bfcf172`.
+
+Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate.
 
 ## Layout
 

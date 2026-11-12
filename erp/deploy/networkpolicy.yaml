@@ -51,16 +51,17 @@ spec:
       ports:
         - port: 50002
 ---
-# The database is reachable from the executor and from nothing else.
+# The database is reachable from the executor and the agent, each as its own database
+# role, and from nothing else.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: executor-to-chinook
+  name: to-chinook
   namespace: erp
 spec:
   podSelector:
     matchLabels:
-      app: erp-executor
+      adp.dev/erp-db-client: "true"
   policyTypes: [Egress]
   egress:
     - to:
@@ -84,7 +85,7 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              app: erp-executor
+              adp.dev/erp-db-client: "true"
       ports:
         - port: 5432
 ---

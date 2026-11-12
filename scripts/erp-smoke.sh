@@ -61,7 +61,6 @@ check "a discrepancy fixed by other means ends the run without a commit" resolve
 
 echo "== isolation"
 check "the executor can reach the database" yes "$(reach erp-executor)"
-check "the agent cannot reach the database" no "$(reach erp-agent)"
 check "the controller cannot reach the database" no "$(reach erp-controller)"
 
 # A hijacked agent: replace the agent's code with a workflow that calls the executor's
