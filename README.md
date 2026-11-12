@@ -62,6 +62,35 @@ Without a provider key, `smart` is served by the local fallback. Ask the agent s
 kubectl exec -n agents deploy/research-agent -c agent -- python app.py ask "Why is the sky blue?"
 ```
 
+## ERP discrepancy agent (branch `erp-discrepancy-agent`)
+
+A tenant of the platform: it finds business data that breaks a rule, has a model propose a typed fix, and applies the fix only after a named person approves that exact proposal. Terms are defined in [CONTEXT.md](CONTEXT.md); decisions are ADRs 0005 to 0011.
+
+```mermaid
+flowchart LR
+  T[Trigger] -->|start run| C
+  H([Approver]) -->|decision on one proposal| C
+  C[Controller: workflow, no model, no DB access] -->|diagnose| A[Agent: model, read-only]
+  C -->|dry_run, commit| E[Executor: fix functions only, no model]
+  E -->|two functions| DB[(Chinook)]
+  A -.->|refused by policy| E
+```
+
+| Property | Proof in `scripts/erp-smoke.sh` |
+|---|---|
+| A fix is applied only after a named approver approves that exact proposal | Approving a different proposal, or as nobody, changes nothing; a valid approval commits and the audit row names the approver |
+| Rejection and "fixed by other means" apply nothing | Both end the run without a commit |
+| Only the executor can reach the database | The agent and controller cannot open a connection |
+| A hijacked agent cannot commit | The agent's code is replaced with a direct call to `commit`; the executor's sidecar refuses it |
+
+```bash
+scripts/up.sh         # the platform
+scripts/erp-up.sh     # this tenant
+scripts/erp-smoke.sh
+```
+
+Built so far: the three workloads, access policies, typed fixes enforced by database roles, approval bound to a proposal hash, deadlines with escalation. Not built yet: the model (the agent is a stub that always proposes one fix type), the Drasi trigger, Keycloak-verified approvers, and the eval gate.
+
 ## Layout
 
 | Path | What |

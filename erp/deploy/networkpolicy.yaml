@@ -1,0 +1,111 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: erp
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# What every Dapr app here needs: DNS, the Dapr control plane, the workflow state store,
+# and sidecar-to-sidecar calls to the other two apps.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dapr-apps
+  namespace: erp
+spec:
+  podSelector:
+    matchLabels:
+      adp.dev/dapr-app: "true"
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              adp.dev/dapr-app: "true"
+      ports:
+        - port: 50002
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - {port: 53, protocol: UDP}
+        - {port: 53, protocol: TCP}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dapr-system
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: aws
+      ports:
+        - port: 4566
+    - to:
+        - podSelector:
+            matchLabels:
+              adp.dev/dapr-app: "true"
+      ports:
+        - port: 50002
+---
+# The database is reachable from the executor and from nothing else.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: executor-to-chinook
+  namespace: erp
+spec:
+  podSelector:
+    matchLabels:
+      app: erp-executor
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: chinook
+      ports:
+        - port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chinook
+  namespace: erp
+spec:
+  podSelector:
+    matchLabels:
+      app: chinook
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: erp-executor
+      ports:
+        - port: 5432
+---
+# The agent's only other destination: the AI gateway, for model calls.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-to-gateway
+  namespace: erp
+spec:
+  podSelector:
+    matchLabels:
+      app: erp-agent
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: ai-gateway
+      ports:
+        - port: 8080

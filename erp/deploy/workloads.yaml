@@ -1,0 +1,161 @@
+# Three workloads from one image. What separates them is identity: each has its own
+# ServiceAccount and Dapr app id, and the policies in dapr.yaml and networkpolicy.yaml key on those.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: erp-controller
+  namespace: erp
+automountServiceAccountToken: false
+---
+# Runs each run's workflow. No model, no database access.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-controller
+  namespace: erp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: erp-controller
+  template:
+    metadata:
+      labels:
+        app: erp-controller
+        adp.dev/dapr-app: "true"
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: erp-controller
+        dapr.io/config: erp
+        dapr.io/disable-builtin-k8s-secret-store: "true"
+        dapr.io/app-port: "8080"
+    spec:
+      serviceAccountName: erp-controller
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: adp/erp:dev
+          imagePullPolicy: Never
+          args: ["controller.py"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: erp-agent
+  namespace: erp
+automountServiceAccountToken: false
+---
+# Performs diagnosis attempts. Has a model (through the gateway); can change nothing.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-agent
+  namespace: erp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: erp-agent
+  template:
+    metadata:
+      labels:
+        app: erp-agent
+        adp.dev/dapr-app: "true"
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: erp-agent
+        dapr.io/config: erp
+        dapr.io/disable-builtin-k8s-secret-store: "true"
+    spec:
+      serviceAccountName: erp-agent
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: adp/erp:dev
+          imagePullPolicy: Never
+          args: ["agent.py"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: erp-executor
+  namespace: erp
+automountServiceAccountToken: false
+---
+# Checks and commits fixes through the erp-write binding. No model.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-executor
+  namespace: erp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: erp-executor
+  template:
+    metadata:
+      labels:
+        app: erp-executor
+        adp.dev/dapr-app: "true"
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: erp-executor
+        dapr.io/config: erp
+        dapr.io/disable-builtin-k8s-secret-store: "true"
+    spec:
+      serviceAccountName: erp-executor
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: adp/erp:dev
+          imagePullPolicy: Never
+          args: ["executor.py"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
