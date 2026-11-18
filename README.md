@@ -62,6 +62,23 @@ Without a provider key, `smart` is served by a local model: the host's Ollama wh
 kubectl exec -n agents deploy/research-agent -c agent -- python app.py ask "Why is the sky blue?"
 ```
 
+## Tools over MCP (opt-in)
+
+The order tools from AWS's *Secure AI Agents on Amazon EKS* workshop (labs 3 and 4), behind the same gateway on its `mcp` listener (`:8081/mcp`). `tools/orders-mcp/server.py` is the workshop's file unchanged; it reads DynamoDB on floci because boto3 takes `AWS_ENDPOINT_URL` from the environment. Callers authenticate with their ServiceAccount token, as for models. Which identity may use which tool is one policy (`tools/deploy/gateway-mcp.yaml`), and a tool a caller may not use is not refused but absent: it is missing from that caller's `tools/list`, and calling it gets the same error as a tool that does not exist.
+
+| Tool | research-agent | intern |
+|---|---|---|
+| `lookup_order` | yes | yes |
+| `initiate_return` | yes | no |
+| `check_inventory` | no | no (no rule allows it) |
+
+```sh
+scripts/tools-up.sh     # after up.sh: image, orders table, server, route, policy
+scripts/tools-smoke.sh  # 13 checks: identity, visibility, calls, isolation
+```
+
+Not built yet: an agent that calls these tools as a workflow activity, and the prompt-injection controls tool output needs (adp-2id).
+
 ## ERP discrepancy agent (branch `erp-discrepancy-agent`)
 
 A tenant of the platform: it finds business data that breaks a rule, has a model propose a typed fix, and applies the fix only after a named person approves that exact proposal. Terms are defined in [CONTEXT.md](CONTEXT.md); decisions are ADRs 0005 to 0011.
@@ -108,6 +125,7 @@ Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate
 | `platform/dapr/` | State store component and Dapr configuration for agents |
 | `platform/agents/` | Tenant namespace policy and the sample agent's deployment |
 | `agent/` | The sample durable agent |
+| `tools/` | The opt-in tools stage: the workshop's orders MCP server and its gateway route and policy |
 | `.dagger/` | CI pipeline |
 | `boundary_register.yaml`, `tools/boundary/` | Identifiers two components must agree on, verified in CI ([docs/boundary-register.md](docs/boundary-register.md)) |
 | `docs/` | Decisions, threat model, source of each practice |
