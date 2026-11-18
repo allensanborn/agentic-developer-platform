@@ -50,15 +50,28 @@ check "fast is served by the local 1B model" llama3.2:1b "$model"
 echo "--- authorization and routing"
 read -r code _ <<<"$(chat "$intern" smart)"
 check "intern may not call smart" 403 "$code"
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 read -r code model <<<"$(chat "$research" smart)"
 check "research-agent may call smart" 200 "$code"
-echo "      smart was answered by: $model (llama3.2:3b means the hosted provider failed over)"
+# Which endpoint served it: the hosted provider, the host's Ollama or the cluster's (both
+# local ones report the same model name). From the gateway's access log since this call,
+# successful attempts only: a failed attempt is logged with the endpoint it tried.
+endpoint=$(kubectl logs -n ai-gateway deploy/ai-gateway --since-time="$since" 2>/dev/null |
+  grep 'jwt.sub=system:serviceaccount:agents:research-agent' | grep 'agw.ai.original_model=smart' | grep 'http.status=200' |
+  tail -n1 | grep -o 'endpoint=[^ ]*' | cut -d= -f2)
+echo "      smart was answered by: $model at ${endpoint:-unknown}"
+if curl -s -m 2 -o /dev/null http://localhost:11434/api/version; then
+  check "with the host's Ollama running, smart is served by it" host.docker.internal:11434 "$endpoint"
+else
+  echo "SKIP  smart is served by the host's Ollama (not running on this machine)"
+fi
 read -r code _ <<<"$(chat "$research" llama-3b)"
 check "internal models cannot be requested directly" 404 "$code"
 
 echo "--- network isolation"
 check "a namespace without the client label cannot reach the gateway" 000 "$(status default $GW/v1/models "$intern")"
 check "agents cannot reach the local models directly" 000 "$(status agents http://ollama.models.svc.cluster.local:11434/api/tags)"
+check "agents cannot reach the host's model directly" 000 "$(status agents http://host.docker.internal:11434/api/version)"
 check "agents cannot reach the internet" 000 "$(status agents https://openrouter.ai)"
 
 echo "--- credentials"
