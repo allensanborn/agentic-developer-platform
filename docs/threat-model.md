@@ -32,6 +32,7 @@ Scope: the platform as built, on one cluster. Method: STRIDE over the trust boun
 | 10 | A secret is committed | gitleaks over history and trivy over the tree in CI | `dagger call check` |
 | 11 | Provider outage takes agents down | Failover to a local model | smoke: `smart` answers on fallback |
 | 12 | A leaked provider key stays valid | Rotation is one command, live in about a minute | by hand: 45 s |
+| 14 | A poisoned agent harness (`.claude/settings.json` hook, `.mcp.json` server, agent instructions) runs code on every developer who opens the repo | `harness.lock` content lock; `devbox.json` may not declare `init_hook` (ADR 0013). Advisory: no branch protection on this plan | `dagger call check`: `Harness` |
 
 ## Open risks
 

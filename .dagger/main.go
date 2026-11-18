@@ -147,7 +147,23 @@ func (m *Ci) Boundaries(
 		Stdout(ctx)
 }
 
-// Check is the single CI entrypoint: lint, test, boundaries, scan.
+// Harness verifies harness.lock: every file a coding agent executes from this repo (.claude/,
+// .mcp.json, AGENTS.md, CLAUDE.md) matches its locked sha256, and devbox.json has no init_hook.
+// A harness change has to relock in the same PR (ADR 0013). Standard library only.
+func (m *Ci) Harness(
+	ctx context.Context,
+	// +defaultPath="/"
+	// +ignore=[".git", ".beads", ".scratch", ".devbox", ".kubeconfig"]
+	src *dagger.Directory,
+) (string, error) {
+	return dag.Container().From(pythonImage).
+		WithEnvVariable("PYTHONDONTWRITEBYTECODE", "1").
+		WithDirectory("/src", src).WithWorkdir("/src").
+		WithExec([]string{"python", "-I", "tools/harness/harness.py", "verify"}).
+		Stdout(ctx)
+}
+
+// Check is the single CI entrypoint: lint, test, boundaries, harness lock, scan.
 func (m *Ci) Check(
 	ctx context.Context,
 	// +defaultPath="/"
@@ -160,6 +176,7 @@ func (m *Ci) Check(
 		g.Go(func() error { _, err := m.Test(ctx, src.Directory(dir)); return err })
 	}
 	g.Go(func() error { _, err := m.Boundaries(ctx, src.WithoutDirectory(".git")); return err })
+	g.Go(func() error { _, err := m.Harness(ctx, src.WithoutDirectory(".git")); return err })
 	g.Go(func() error { return m.Scan(ctx, src) })
 	return g.Wait()
 }

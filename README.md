@@ -50,7 +50,7 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
 scripts/smoke.sh                    # 16 end-to-end security checks (one skips without a host model)
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
-dagger call check                   # lint, unit tests, boundary register, secret/misconfig/vulnerability scans
+dagger call check                   # lint, unit tests, boundary register, harness lock, secret/misconfig/vulnerability scans
 k3d cluster delete adp              # tear down
 ```
 
@@ -135,6 +135,7 @@ Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate
 - **Point an alias at another model or provider:** edit `platform/gateway/models.yaml`, re-run `up.sh`. No agent changes.
 - **Add a provider:** add a Secrets Manager secret and an `ExternalSecret` (`platform/secrets/`), then an internal model with `auth.secretRef` and an allow-list.
 - **Onboard an agent:** a ServiceAccount in `agents`, its identity added to the models it may use, and a `principal-*` entry in `boundary_register.yaml`.
+- **Edit anything under `.claude/`, or `.mcp.json`, `AGENTS.md`, `CLAUDE.md`:** `dagger call check` goes red until you run `python3 tools/harness/harness.py lock` and commit `harness.lock` (ADR 0013).
 - **Edit any file `boundary_register.yaml` cites:** `dagger call check` goes red (STALE) until you run `tools/boundary/boundary.py refresh` ([docs/boundary-register.md](docs/boundary-register.md)).
 - **Move to real AWS:** remove the floci endpoint overrides and the dummy credential Secrets; give External Secrets and the agent's sidecar IAM roles (IRSA or Pod Identity). The manifests' comments mark each spot.
 

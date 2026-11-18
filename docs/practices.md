@@ -39,6 +39,7 @@ The design follows practices recorded in the maintainer's notes and three earlie
 | Expose intent-level capabilities to agents, not raw infrastructure | partly: aliases are intent; a self-service "Agent" capability is open | maintainer notes |
 | Put policy inside the capability | built: access and budget are in the gateway, not in agent code or prompts | same; maintainer notes |
 | Pin tool versions; make the environment reproducible from zero | built: `versions.env`, digests, `devbox.lock`; `up.sh` from an empty cluster | maintainer notes |
+| Treat agent-harness config as executable code | built: `harness.lock` checked in `dagger call check` (ADR 0013) | maintainer notes |
 | Guardrails should explain, not just refuse | open: denials are bare 401/403/429 | maintainer notes |
 
 ## From earlier repositories
