@@ -48,7 +48,7 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 
 ```sh
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
-scripts/smoke.sh                    # 14 end-to-end security checks
+scripts/smoke.sh                    # 16 end-to-end security checks (one skips without a host model)
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
 dagger call check                   # lint, unit tests, boundary register, Renovate config, secret/misconfig/vulnerability scans
 dagger call renovate --token=cmd://"gh auth token"   # what Renovate would bump (no PRs; ADR 0012)
@@ -57,11 +57,28 @@ k3d cluster delete adp              # tear down
 
 `up.sh` writes a repo-local `.kubeconfig` and leaves yours alone: `export KUBECONFIG=$PWD/.kubeconfig`.
 
-Without a provider key, `smart` is served by the local fallback. Ask the agent something:
+Without a provider key, `smart` is served by a local model: the host's Ollama when it is running (`ollama pull llama3.2:3b && ollama serve`; the cluster reaches it at `host.docker.internal`), otherwise the in-cluster one, which on CPU is too slow for the ERP agent. Ask the agent something:
 
 ```sh
 kubectl exec -n agents deploy/research-agent -c agent -- python app.py ask "Why is the sky blue?"
 ```
+
+## Tools over MCP (opt-in)
+
+The order tools from AWS's *Secure AI Agents on Amazon EKS* workshop (labs 3 and 4), behind the same gateway on its `mcp` listener (`:8081/mcp`). `tools/orders-mcp/server.py` is the workshop's file unchanged; it reads DynamoDB on floci because boto3 takes `AWS_ENDPOINT_URL` from the environment. Callers authenticate with their ServiceAccount token, as for models. Which identity may use which tool is one policy (`tools/deploy/gateway-mcp.yaml`), and a tool a caller may not use is not refused but absent: it is missing from that caller's `tools/list`, and calling it gets the same error as a tool that does not exist.
+
+| Tool | research-agent | intern |
+|---|---|---|
+| `lookup_order` | yes | yes |
+| `initiate_return` | yes | no |
+| `check_inventory` | no | no (no rule allows it) |
+
+```sh
+scripts/tools-up.sh     # after up.sh: image, orders table, server, route, policy
+scripts/tools-smoke.sh  # 13 checks: identity, visibility, calls, isolation
+```
+
+Not built yet: an agent that calls these tools as a workflow activity, and the prompt-injection controls tool output needs (adp-2id).
 
 ## ERP discrepancy agent (branch `erp-discrepancy-agent`)
 
@@ -87,12 +104,12 @@ flowchart LR
 ```bash
 scripts/up.sh         # the platform
 scripts/erp-up.sh     # this tenant
-scripts/erp-smoke.sh
+scripts/erp-smoke.sh  # the mechanics, with a scripted model; ERP_SMOKE_ALIAS=smart for a real one
 ```
 
 Built so far: the three workloads, access policies, typed fixes enforced by database roles, approval bound to a proposal hash, deadlines with escalation, and the LangGraph diagnosis graph (gather facts, model chooses a declared fix, validate).
 
-Not working yet: a run against a real model. The in-cluster CPU models generate under one token per second on the development machine, so a diagnosis times out and `scripts/erp-smoke.sh` cannot pass until a faster model is routed (a hosted provider key, or a GPU-backed local model). The smoke test last passed with a stub agent at commit `bfcf172`.
+A run against a real model needs the host's Ollama (see Run it) or a hosted provider key: the in-cluster CPU models generate under one token per second, so a diagnosis times out. With the host's `llama3.2:3b` (about 120 tokens per second on the development machine), `ERP_SMOKE_ALIAS=smart scripts/erp-smoke.sh` passes in under a minute. Without one, `scripts/erp-smoke.sh` still checks every mechanism: by default the agent diagnoses through the `scripted` alias, a model behind the gateway that gives one fixed answer (`platform/models/scripted.yaml`).
 
 Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate.
 
@@ -109,6 +126,7 @@ Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate
 | `platform/dapr/` | State store component and Dapr configuration for agents |
 | `platform/agents/` | Tenant namespace policy and the sample agent's deployment |
 | `agent/` | The sample durable agent |
+| `tools/` | The opt-in tools stage: the workshop's orders MCP server and its gateway route and policy |
 | `.dagger/` | CI pipeline |
 | `boundary_register.yaml`, `tools/boundary/` | Identifiers two components must agree on, verified in CI ([docs/boundary-register.md](docs/boundary-register.md)) |
 | `docs/` | Decisions, threat model, source of each practice |

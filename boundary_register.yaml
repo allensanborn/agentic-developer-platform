@@ -52,19 +52,27 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 32
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
       line: 58
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
-      line: 85
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 86
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 119
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+    - kind: file
+      path: tools/deploy/gateway-mcp.yaml
+      line: 60
+      sha256: 8adc07199649443d19ff324ed876ccac2fe156a54d5f2f27a1ca125c255707c0
 - id: principal-erp-agent
   kind: principal
   relation: equal
-  description: ServiceAccount name; the <name> in the gateway's jwt.sub allow-list on all three models.
+  description: ServiceAccount name; the <name> in the gateway's jwt.sub allow-list on every model it may use.
   sides:
   - party: erp
     role: defines
@@ -81,15 +89,23 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 33
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
       line: 59
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
-      line: 86
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 87
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 120
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 200
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
 - id: principal-intern
   kind: principal
   relation: equal
@@ -110,7 +126,7 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 34
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
 - id: principal-namespace-agents
   kind: principal
   relation: equal
@@ -135,19 +151,27 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 32
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
       line: 34
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
       line: 58
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
-      line: 85
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 86
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 119
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+    - kind: file
+      path: tools/deploy/gateway-mcp.yaml
+      line: 60
+      sha256: 8adc07199649443d19ff324ed876ccac2fe156a54d5f2f27a1ca125c255707c0
 - id: principal-namespace-erp
   kind: principal
   relation: equal
@@ -168,15 +192,23 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 33
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
       line: 59
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
     - kind: file
       path: platform/gateway/models.yaml
-      line: 86
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 87
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 120
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 200
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
 - id: alias-fast
   kind: name
   relation: equal
@@ -188,8 +220,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 105
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 139
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
   - party: research-agent
     role: consumes
     value: fast
@@ -209,8 +241,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 124
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 158
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
   - party: research-agent
     role: consumes
     value: smart
@@ -227,6 +259,27 @@ entries:
       path: erp/app/graph.py
       line: 19
       sha256: 8f4f12d8e942dfea6173886c5fa45d225b62265c97d425c1088e71b423672fd3
+- id: alias-scripted
+  kind: name
+  relation: equal
+  description: The scripted model's public alias; scripts/erp-smoke.sh sets it as the ERP agent's DIAGNOSIS_ALIAS.
+  sides:
+  - party: gateway
+    role: defines
+    value: scripted
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 206
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
+  - party: erp-smoke
+    role: consumes
+    value: scripted
+    records:
+    - kind: file
+      path: scripts/erp-smoke.sh
+      line: 15
+      sha256: b7177830d2bd97690b5394acba6b4823f39654e12b162afedab8a24ce48f0d3b
 - id: provider-key-secret
   kind: secret
   relation: equal
@@ -246,8 +299,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 89
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 123
+      sha256: 4ac86564d4873adb2bcafa4369945265a88b7a46ba4001833368156ddfdb3153
 - id: provider-key-remote-ref
   kind: secret
   relation: equal
@@ -259,8 +312,8 @@ entries:
     records:
     - kind: file
       path: scripts/up.sh
-      line: 45
-      sha256: 60840629f4e748d6f66770d3f04d91ae1f073fda7385fb6a70ead823b1453ca2
+      line: 55
+      sha256: e2238c338591669051653b71dbf8d8472fff20ea4f27885f62b79e53e3265298
   - party: secrets
     role: consumes
     value: adp/providers/openrouter
@@ -331,3 +384,86 @@ entries:
       path: erp/deploy/workloads.yaml
       line: 1
       sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c
+- id: gateway-mcp-listener
+  kind: name
+  relation: equal
+  description: 'The gateway listener the tools route attaches to. A mismatch leaves the HTTPRoute unattached: every tool call is a 404.'
+  sides:
+  - party: gateway
+    role: defines
+    value: mcp
+    records:
+    - kind: file
+      path: platform/gateway/gateway.yaml
+      line: 49
+      sha256: 20d3aaa8f352d222bf7c3fe23d8f2891da4349a37547896ba0a615624f9c5e0b
+  - party: tools-route
+    role: consumes
+    value: mcp
+    records:
+    - kind: file
+      path: tools/deploy/gateway-mcp.yaml
+      line: 26
+      sha256: 8adc07199649443d19ff324ed876ccac2fe156a54d5f2f27a1ca125c255707c0
+- id: gateway-mcp-port
+  kind: endpoint
+  relation: equal
+  description: The mcp listener's port. Network policies that admit it, and callers that dial it, must agree, or calls time out.
+  sides:
+  - party: gateway
+    role: defines
+    value: '8081'
+    records:
+    - kind: file
+      path: platform/gateway/gateway.yaml
+      line: 51
+      sha256: 20d3aaa8f352d222bf7c3fe23d8f2891da4349a37547896ba0a615624f9c5e0b
+  - party: network-policy
+    role: consumes
+    value: '8081'
+    records:
+    - kind: file
+      path: tools/deploy/gateway-mcp.yaml
+      line: 80
+      sha256: 8adc07199649443d19ff324ed876ccac2fe156a54d5f2f27a1ca125c255707c0
+    - kind: file
+      path: tools/deploy/gateway-mcp.yaml
+      line: 109
+      sha256: 8adc07199649443d19ff324ed876ccac2fe156a54d5f2f27a1ca125c255707c0
+  - party: tools-smoke
+    role: consumes
+    value: '8081'
+    records:
+    - kind: file
+      path: scripts/tools-smoke.sh
+      line: 9
+      sha256: f4ea6071c222348f1e4840770829d1fe96c3d0b48e147d05715ee35a2bb17550
+- id: orders-table
+  kind: table
+  relation: equal
+  description: The DynamoDB table tools-up.sh creates, the orders MCP server reads, and the seed writes.
+  sides:
+  - party: bootstrap
+    role: defines
+    value: adp-orders
+    records:
+    - kind: file
+      path: scripts/tools-up.sh
+      line: 15
+      sha256: 174ffac05b650a2dff5509c04161cb52beb1d4d7e0ae1baa17eec34a3e9be5ec
+  - party: orders-mcp
+    role: consumes
+    value: adp-orders
+    records:
+    - kind: file
+      path: tools/deploy/orders-mcp.yaml
+      line: 56
+      sha256: 871184e00a7f290d6903d8f67860bcf1c4e839afb5af69a94b6f0b61ec6a28d2
+  - party: seed
+    role: consumes
+    value: adp-orders
+    records:
+    - kind: file
+      path: tools/orders-mcp/seed.json
+      line: 2
+      sha256: 64795d0f0c31aebb691df74dde81570e6440c0fa42be1f047a2c6f41395e0d9e

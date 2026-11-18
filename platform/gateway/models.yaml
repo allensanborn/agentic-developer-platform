@@ -61,6 +61,40 @@ spec:
       - field: model
         expression: '"llama3.2:3b"'
 ---
+# --- Internal: the same 3B model on the host's Ollama (Metal/GPU), for development. The
+# in-cluster copy runs on CPU at well under a token per second (adp-bd9). Reached at
+# host.docker.internal (OrbStack: 0.250.250.254); the NetworkPolicy allows that address only.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: llama-3b-host
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  visibility: Internal
+  provider: OpenAI
+  baseURL: http://host.docker.internal:11434/v1
+  policies:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - 'jwt.sub == "system:serviceaccount:agents:research-agent"'
+          - 'jwt.sub == "system:serviceaccount:erp:erp-agent"'
+    transformations:
+      - field: model
+        expression: '"llama3.2:3b"'
+    # Host Ollama not running counts as unhealthy, so `smart` falls through to the cluster.
+    health:
+      unhealthyCondition: "response.code >= 500"
+      eviction:
+        consecutiveFailures: 1
+        duration: 60s
+---
 # --- Internal: hosted model (OpenRouter). The gateway attaches the API key; the Secret is
 # synced from AWS Secrets Manager (platform/secrets/) and exists only in this namespace.
 apiVersion: agentgateway.dev/v1alpha1
@@ -136,5 +170,50 @@ spec:
             name: openrouter-gpt-oss
           priority: 0
         - modelRef:
-            name: llama-3b
+            name: llama-3b-host
           priority: 1
+        - modelRef:
+            name: llama-3b
+          priority: 2
+---
+# --- Internal: scripted model (platform/models/scripted.yaml). One fixed diagnosis, for
+# checking the ERP mechanics without a real model. Only the ERP agent may reach it.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: scripted-model
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  visibility: Internal
+  provider: OpenAI
+  baseURL: http://scripted-model.models.svc.cluster.local:11434/v1
+  policies:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - 'jwt.sub == "system:serviceaccount:erp:erp-agent"'
+---
+# --- Public alias: scripted. Used by scripts/erp-smoke.sh unless ERP_SMOKE_ALIAS says otherwise.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: scripted
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  virtualModel:
+    weighted:
+      targets:
+        - modelRef:
+            name: scripted-model
+          weight: 1

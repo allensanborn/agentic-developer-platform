@@ -1,0 +1,73 @@
+{
+ "adp-orders": [
+  {
+   "PutRequest": {
+    "Item": {
+     "order_id": {
+      "S": "ORD-1001"
+     },
+     "customer": {
+      "S": "Jane Doe"
+     },
+     "status": {
+      "S": "shipped"
+     },
+     "tracking": {
+      "S": "1Z999AA10123456784"
+     },
+     "estimated_delivery": {
+      "S": "2026-07-08"
+     },
+     "items": {
+      "S": "[{\"name\": \"Laptop Pro 15\", \"qty\": 1, \"price\": 1299.99}]"
+     }
+    }
+   }
+  },
+  {
+   "PutRequest": {
+    "Item": {
+     "order_id": {
+      "S": "ORD-1002"
+     },
+     "customer": {
+      "S": "John Smith"
+     },
+     "status": {
+      "S": "delivered"
+     },
+     "tracking": {
+      "S": "1Z999AA10987654321"
+     },
+     "estimated_delivery": {
+      "S": "2026-06-20"
+     },
+     "items": {
+      "S": "[{\"name\": \"Wireless Mouse\", \"qty\": 1, \"price\": 29.99}, {\"name\": \"USB-C Hub\", \"qty\": 2, \"price\": 49.99}]"
+     }
+    }
+   }
+  },
+  {
+   "PutRequest": {
+    "Item": {
+     "order_id": {
+      "S": "ORD-1003"
+     },
+     "customer": {
+      "S": "Alice Johnson"
+     },
+     "status": {
+      "S": "processing"
+     },
+     "estimated_delivery": {
+      "S": "2026-07-11"
+     },
+     "items": {
+      "S": "[{\"name\": \"Noise Cancelling Headphones\", \"qty\": 1, \"price\": 249.99}]"
+     }
+    }
+   }
+  }
+ ]
+}
