@@ -80,6 +80,25 @@ scripts/tools-smoke.sh  # 13 checks: identity, visibility, calls, isolation
 
 Not built yet: an agent that calls these tools as a workflow activity, and the prompt-injection controls tool output needs (adp-2id).
 
+## Sandboxed code execution (opt-in)
+
+The workshop's lab 5. One tool, `run_python`, on the `mcp` listener at `/code-mcp`, for research-agent only. The broker (`sandbox/broker/`, upstream's files unchanged) fetches a scoped slice of orders itself with a parameterized query and hands the rows and the model's code to a sandbox as files, so the rows never pass through the model. The sandbox is a gVisor pod claimed from a warm pool and destroyed after the call: its own kernel, an enforced seccomp profile, no Kubernetes credential, and no network.
+
+| Property | How | Proof in `scripts/sandbox-smoke.sh` |
+|---|---|---|
+| Its own kernel | `runtimeClassName: gvisor` (no `/dev/kvm` in a k3d node, so gVisor rather than the workshop's Firecracker microVMs) | `uname -r` differs from the node's |
+| Seccomp enforced inside the sandbox | runsc `oci-seccomp = "true"`; without it `RuntimeDefault` passes admission and is ignored | `Seccomp: 2`; `unshare(CLONE_NEWUSER)` is EPERM |
+| Air-gapped while it runs | the air gap selects `sandbox-kind`, which a pod keeps when claimed; the workshop's policy selects a label the controller removes on claim (`agent-sandbox` defect 001, fails open) | a claimed sandbox cannot reach the internet or the API server; a control pod with the same runtime can |
+| Pod Security `restricted` | the template, router and controller carry a compliant `securityContext`; without it admission refuses the pods and the only trace is the Sandbox's `Ready=False` | both warm-pool pods Ready |
+| Only research-agent can run code | per-tool policy on the broker's route | in research-agent's `tools/list`, "unknown resource" for intern |
+
+```sh
+scripts/sandbox-up.sh     # after up.sh and tools-up.sh: gVisor on the agent node (restarts it), agent-sandbox, broker
+scripts/sandbox-smoke.sh  # 15 checks
+```
+
+gVisor's isolation is weaker than a microVM's: the untrusted code talks to a kernel written in Go in userspace, and a Linux kernel escape from gVisor lands on the node.
+
 ## ERP discrepancy agent (branch `erp-discrepancy-agent`)
 
 A tenant of the platform: it finds business data that breaks a rule, has a model propose a typed fix, and applies the fix only after a named person approves that exact proposal. Terms are defined in [CONTEXT.md](CONTEXT.md); decisions are ADRs 0005 to 0011.
@@ -127,6 +146,7 @@ Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate
 | `platform/agents/` | Tenant namespace policy and the sample agent's deployment |
 | `agent/` | The sample durable agent |
 | `tools/` | The opt-in tools stage: the workshop's orders MCP server and its gateway route and policy |
+| `sandbox/` | The opt-in sandbox stage: the workshop's code-execution broker, the sandbox runtime, gVisor and agent-sandbox |
 | `.dagger/` | CI pipeline |
 | `boundary_register.yaml`, `tools/boundary/` | Identifiers two components must agree on, verified in CI ([docs/boundary-register.md](docs/boundary-register.md)) |
 | `docs/` | Decisions, threat model, source of each practice |

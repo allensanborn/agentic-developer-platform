@@ -15,6 +15,10 @@
 | `gateway-mcp-listener` | Gateway listener name | the tools `HTTPRoute` `sectionName` | route unattached, 404 |
 | `gateway-mcp-port` | Gateway listener port | the tools NetworkPolicies, `scripts/tools-smoke.sh` | connection timeout |
 | `orders-table` | `scripts/tools-up.sh` create-table | the server's `ORDERS_TABLE`, the seed | every lookup "not found" |
+| `sandbox-warmpool`, `sandbox-template` | the WarmPool and SandboxTemplate names | the broker's `SANDBOX_WARMPOOL`, the pool's template ref | run_python fails at claim time |
+| `runtime-class-gvisor`, `gvisor-node-label` | RuntimeClass name; the node label `sandbox-up.sh` sets | the template's `runtimeClassName`; the RuntimeClass `nodeSelector` | pods never schedule |
+| `sandbox-airgap-label` | the template's pod label | the air-gap policy's selector | **air gap fails open** |
+| `code-mcp-path` | the broker's HTTPRoute path | `scripts/sandbox-smoke.sh` | 404 |
 | `provider-key-not-in-agents` (`absent`) | — | agent manifests must not mention `openrouter-apikey` at all | threat 1 |
 
 Not registered, and why:

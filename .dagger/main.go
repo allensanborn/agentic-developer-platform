@@ -44,7 +44,7 @@ func (m *Ci) Lint(
 	g.Go(func() error {
 		_, err := dag.Container().From(hadolintImage).
 			WithDirectory("/src", src).WithWorkdir("/src").
-			WithExec([]string{"hadolint", "agent/Dockerfile", "erp/app/Dockerfile", "erp/db/Dockerfile", "tools/orders-mcp/Dockerfile"}).Sync(ctx)
+			WithExec([]string{"hadolint", "agent/Dockerfile", "erp/app/Dockerfile", "erp/db/Dockerfile", "tools/orders-mcp/Dockerfile", "sandbox/broker/Dockerfile", "sandbox/runtime/Dockerfile"}).Sync(ctx)
 		return err
 	})
 	g.Go(func() error {
@@ -54,6 +54,7 @@ func (m *Ci) Lint(
 			WithExec([]string{"kustomize", "build", "platform", "-o", "/rendered/platform.yaml"}).
 			WithExec([]string{"kustomize", "build", "erp/deploy", "-o", "/rendered/erp.yaml"}).
 			WithExec([]string{"kustomize", "build", "tools/deploy", "-o", "/rendered/tools.yaml"}).
+			WithExec([]string{"kustomize", "build", "sandbox/deploy", "-o", "/rendered/sandbox.yaml"}).
 			Directory("/rendered")
 		// Built-in kinds are validated strictly. CRD kinds (agentgateway, Dapr, External
 		// Secrets) have no published schemas here and are validated by the API server
@@ -121,7 +122,7 @@ func (m *Ci) Scan(
 		_, err := trivy.WithExec(append([]string{"trivy", "fs", "--scanners", "vuln,secret"}, append(fail, ".")...)).Sync(ctx)
 		return err
 	})
-	for _, dir := range []string{"agent", "erp/app", "erp/db", "tools/orders-mcp"} { // the images that would ship
+	for _, dir := range []string{"agent", "erp/app", "erp/db", "tools/orders-mcp", "sandbox/broker", "sandbox/runtime"} { // the images that would ship
 		g.Go(func() error {
 			image := m.Build(src.Directory(dir)).AsTarball()
 			_, err := trivy.WithFile("/image.tar", image).

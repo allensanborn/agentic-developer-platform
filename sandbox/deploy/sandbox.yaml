@@ -1,0 +1,115 @@
+# Where model-written code runs: gVisor pods from a warm pool, one claimed per run_python
+# call and destroyed after it. The workshop's manifests with runtimeClassName gvisor instead
+# of kata-fc (no /dev/kvm in a k3d node), plus what Pod Security `restricted` requires.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agent-sandbox
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+# runsc is installed on the agent node only (scripts/sandbox-up.sh labels it).
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor
+handler: runsc
+scheduling:
+  nodeSelector:
+    adp.dev/gvisor: "true"
+---
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxTemplate
+metadata:
+  name: gvisor-python
+  namespace: agent-sandbox
+spec:
+  # The controller's own policy. A custom networkPolicy replaces upstream's defaults rather
+  # than merging, so the router ingress is restated. It keys on a label warm-pool pods do
+  # not carry (defect 001), so sandbox-airgap below is what actually covers a claimed pod.
+  networkPolicyManagement: Managed
+  networkPolicy:
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: agent-sandbox-system
+            podSelector:
+              matchLabels:
+                app: sandbox-router
+    egress: []
+  service: true
+  podTemplate:
+    metadata:
+      labels:
+        sandbox-kind: python # survives the claim; see sandbox-airgap
+    spec:
+      runtimeClassName: gvisor
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # Pod Security `restricted`. Without it admission refuses the pods, and the only trace
+      # is the Sandbox's Ready=False: kubectl apply succeeds and no pod or event appears.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault # enforced inside gVisor only with runsc oci-seccomp (sandbox-up.sh)
+      containers:
+        - name: python-runtime
+          image: adp/python-sandbox:dev
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8888
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            periodSeconds: 1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+      restartPolicy: OnFailure
+---
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxWarmPool
+metadata:
+  name: gvisor-python-pool
+  namespace: agent-sandbox
+spec:
+  replicas: 2
+  sandboxTemplateRef:
+    name: gvisor-python
+---
+# The air gap. Selects on sandbox-kind, which a pod keeps when it is claimed. The workshop's
+# policy selected agents.x-k8s.io/warm-pool-sandbox, which the controller removes on claim,
+# so it covered a sandbox only while it was idle (defect 001, fails open).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sandbox-airgap
+  namespace: agent-sandbox
+spec:
+  podSelector:
+    matchLabels:
+      sandbox-kind: python
+  policyTypes: [Ingress, Egress]
+  egress: []
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agent-sandbox-system
+          podSelector:
+            matchLabels:
+              app: sandbox-router
+      ports:
+        - port: 8888

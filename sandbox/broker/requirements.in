@@ -1,0 +1,4 @@
+mcp>=1.10,<2
+uvicorn
+boto3
+k8s-agent-sandbox==0.5.0

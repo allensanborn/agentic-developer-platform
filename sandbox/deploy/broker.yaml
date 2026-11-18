@@ -1,0 +1,200 @@
+# The code-execution broker (lab 5): one MCP tool, run_python. It fetches a scoped slice of
+# orders itself (read-only, parameterized query) and hands rows and code to a claimed
+# sandbox as files, so the rows never pass through the model. It holds the only rights to
+# claim a sandbox; the sandbox holds no credential at all.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: code-executor
+  namespace: tools
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: code-executor-sandbox
+  namespace: agent-sandbox
+rules:
+  - apiGroups: ["extensions.agents.x-k8s.io"]
+    resources: ["sandboxclaims"]
+    verbs: ["create", "delete", "get", "list", "watch"]
+  - apiGroups: ["agents.x-k8s.io"]
+    resources: ["sandboxes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["agents.x-k8s.io"]
+    resources: ["sandboxes/status"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: code-executor-sandbox
+  namespace: agent-sandbox
+subjects:
+  - kind: ServiceAccount
+    name: code-executor
+    namespace: tools
+roleRef:
+  kind: Role
+  name: code-executor-sandbox
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-executor
+  namespace: tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: code-executor
+  template:
+    metadata:
+      labels:
+        app: code-executor
+    spec:
+      serviceAccountName: code-executor # the SDK claims sandboxes with this token
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: adp/code-executor:dev
+          imagePullPolicy: Never
+          env:
+            - {name: ORDERS_TABLE, value: adp-orders}
+            - {name: AWS_REGION, value: us-east-1}
+            - {name: AWS_ENDPOINT_URL, value: "http://floci.aws.svc.cluster.local:4566"} # delete on AWS
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: aws-credentials, key: access-key}}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: aws-credentials, key: secret-key}}
+            - {name: SANDBOX_WARMPOOL, value: gvisor-python-pool}
+            - {name: SANDBOX_NAMESPACE, value: agent-sandbox}
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-executor
+  namespace: tools
+spec:
+  selector:
+    app: code-executor
+  ports:
+    - port: 8080
+---
+# The tools namespace's policy (tools/deploy/orders-mcp.yaml) already admits the gateway and
+# allows DNS and floci; this adds the router. The Kubernetes API is added by
+# sandbox-up.sh (broker-api-egress.yaml), which knows the API server's address.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-executor-router
+  namespace: tools
+spec:
+  podSelector:
+    matchLabels:
+      app: code-executor
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agent-sandbox-system
+          podSelector:
+            matchLabels:
+              app: sandbox-router
+      ports:
+        - port: 8080
+---
+# The gateway side: route /code-mcp on the mcp listener to the broker.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: code-executor
+  namespace: ai-gateway
+spec:
+  mcp:
+    targets:
+      - name: code-executor
+        static:
+          host: code-executor.tools.svc.cluster.local
+          port: 8080
+          protocol: StreamableHTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: code-mcp
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - name: ai-gateway
+      sectionName: mcp
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /code-mcp
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: code-executor
+---
+# run_python for research-agent only (the workshop gives it to its sales-analyst persona).
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: code-executor-tools
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: agentgateway.dev
+      kind: AgentgatewayBackend
+      name: code-executor
+  backend:
+    mcp:
+      authorization:
+        action: Allow
+        policy:
+          matchExpressions:
+            - 'mcp.tool.name == "run_python" && jwt.sub == "system:serviceaccount:agents:research-agent"'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-gateway-code-executor
+  namespace: ai-gateway
+spec:
+  podSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: ai-gateway
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tools
+          podSelector:
+            matchLabels:
+              app: code-executor
+      ports:
+        - port: 8080
