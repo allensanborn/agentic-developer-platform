@@ -48,7 +48,7 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 
 ```sh
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
-scripts/smoke.sh                    # 14 end-to-end security checks
+scripts/smoke.sh                    # 16 end-to-end security checks (one skips without a host model)
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
 dagger call check                   # lint, unit tests, boundary register, secret/misconfig/vulnerability scans
 k3d cluster delete adp              # tear down
