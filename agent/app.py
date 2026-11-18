@@ -15,12 +15,43 @@ import urllib.request
 from datetime import timedelta
 
 import dapr.ext.workflow as wf
+from opentelemetry import propagate, trace
 
 GATEWAY = os.environ.get("AI_GATEWAY_URL", "http://ai-gateway.ai-gateway.svc.cluster.local:8080")
 MCP_URL = os.environ.get("MCP_URL", "http://ai-gateway.ai-gateway.svc.cluster.local:8081/mcp")
 TOKEN_FILE = os.environ.get("AI_GATEWAY_TOKEN_FILE", "/var/run/secrets/ai-gateway/token")
 
 runtime = wf.WorkflowRuntime()
+
+
+def init_tracing():
+    """Export spans when OTEL_EXPORTER_OTLP_ENDPOINT is set; otherwise tracing is a no-op."""
+    if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        return
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+    provider = TracerProvider()  # service.name from OTEL_SERVICE_NAME
+    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+    trace.set_tracer_provider(provider)
+
+
+tracer = trace.get_tracer("research-agent")
+
+
+def traced(name: str, req: dict):
+    """A span for one activity, continuing the run's trace from the context in its input.
+
+    The context travels in the workflow input, so a resumed run stays in the same trace.
+    """
+    return tracer.start_as_current_span(name, context=propagate.extract(req.get("trace") or {}),
+                                        kind=trace.SpanKind.CLIENT)
+
+
+def with_trace(headers: dict) -> dict:
+    propagate.inject(headers)  # traceparent, so the gateway's span nests under ours
+    return headers
 
 
 def token() -> str:
@@ -35,7 +66,7 @@ def chat(alias: str, prompt: str, system: str | None = None) -> dict:
     req = urllib.request.Request(
         f"{GATEWAY}/v1/chat/completions",
         data=json.dumps(body).encode(),
-        headers={"Authorization": f"Bearer {token()}", "Content-Type": "application/json"},
+        headers=with_trace({"Authorization": f"Bearer {token()}", "Content-Type": "application/json"}),
     )
     try:
         with urllib.request.urlopen(req, timeout=300) as resp:
@@ -56,7 +87,8 @@ def chat(alias: str, prompt: str, system: str | None = None) -> dict:
 
 @runtime.activity(name="call_model")
 def call_model(ctx, req: dict) -> dict:
-    return chat(req["alias"], req["prompt"], req.get("system"))
+    with traced(f"call_model {req['alias']}", req):
+        return chat(req["alias"], req["prompt"], req.get("system"))
 
 
 def mcp_message(body: bytes) -> dict:
@@ -74,8 +106,8 @@ def tool(name: str, arguments: dict) -> dict:
     ponytail: three requests per call (initialize, initialized, call); keep a session per
     worker if tool latency matters.
     """
-    headers = {"Authorization": f"Bearer {token()}", "Content-Type": "application/json",
-               "Accept": "application/json, text/event-stream"}
+    headers = with_trace({"Authorization": f"Bearer {token()}", "Content-Type": "application/json",
+                          "Accept": "application/json, text/event-stream"})
 
     def post(msg: dict, session: str | None = None):
         h = {**headers, **({"mcp-session-id": session} if session else {})}
@@ -98,15 +130,17 @@ def tool(name: str, arguments: dict) -> dict:
 
 @runtime.activity(name="call_tool")
 def call_tool(ctx, req: dict) -> dict:
-    return tool(req["name"], req["arguments"])
+    with traced(f"call_tool {req['name']}", req):
+        return tool(req["name"], req["arguments"])
 
 
 @runtime.workflow(name="order_status")
-def order_status(ctx: wf.DaprWorkflowContext, order_id: str):
+def order_status(ctx: wf.DaprWorkflowContext, inp: dict):
+    order_id, t = inp["arg"], inp.get("trace")
     # The tool call is an activity like a model call: recorded, so a resumed run does not
     # look the order up again. Which tools this agent may call is the gateway's decision.
-    found = yield ctx.call_activity(call_tool, input={"name": "lookup_order", "arguments": {"order_id": order_id}},
-                                    retry_policy=RETRY)
+    found = yield ctx.call_activity(call_tool, input={"name": "lookup_order", "arguments": {"order_id": order_id},
+                                                      "trace": t}, retry_policy=RETRY)
     if "error" in found or "error" in found["result"]:
         return {"order": found, "reply": None}
     # Tool output is data, not instructions: it arrives as a quoted JSON block in the user
@@ -119,8 +153,8 @@ def order_status(ctx: wf.DaprWorkflowContext, order_id: str):
         "Write a two-sentence reply to a customer asking where their order is.\n<order_record>\n"
         + json.dumps(found["result"]) + "\n</order_record>"
     )
-    reply = yield ctx.call_activity(call_model, input={"alias": "smart", "prompt": prompt, "system": system},
-                                    retry_policy=RETRY)
+    reply = yield ctx.call_activity(call_model, input={"alias": "smart", "prompt": prompt, "system": system,
+                                                       "trace": t}, retry_policy=RETRY)
     if "refused" in reply:
         return {"order": found, "reply": None, "refused": reply["refused"]}
     return {"order": found, "reply": reply["text"], "model": reply["model"]}
@@ -130,29 +164,40 @@ RETRY = wf.RetryPolicy(first_retry_interval=timedelta(seconds=2), max_number_of_
 
 
 @runtime.workflow(name="research")
-def research(ctx: wf.DaprWorkflowContext, question: str):
+def research(ctx: wf.DaprWorkflowContext, inp: dict):
+    question, t = inp["arg"], inp.get("trace")
     # Cheap model drafts, stronger model reviews: routing by task, not frontier by default.
-    draft = yield ctx.call_activity(call_model, input={"alias": "fast", "prompt": question}, retry_policy=RETRY)
+    draft = yield ctx.call_activity(call_model, input={"alias": "fast", "prompt": question, "trace": t}, retry_policy=RETRY)
     review_prompt = (
         f"Question: {question}\n\nDraft answer: {draft['text']}\n\n"
         "Correct any errors and reply with the improved answer only."
     )
-    final = yield ctx.call_activity(call_model, input={"alias": "smart", "prompt": review_prompt}, retry_policy=RETRY)
+    final = yield ctx.call_activity(call_model, input={"alias": "smart", "prompt": review_prompt, "trace": t}, retry_policy=RETRY)
     steps = [{k: s[k] for k in ("alias", "model", "tokens")} for s in (draft, final)]
     return {"answer": final["text"], "steps": steps}
 
 
 def run(workflow, arg: str) -> dict:
-    client = wf.DaprWorkflowClient()
-    instance = client.schedule_new_workflow(workflow, input=arg)
-    state = client.wait_for_workflow_completion(instance, timeout_in_seconds=600)
-    return {"instance": instance, "status": state.runtime_status.name, "result": json.loads(state.serialized_output or "null")}
+    # One trace per run: this span is its root, and its context rides in the workflow input
+    # so every activity (and through traceparent, every gateway call) joins it.
+    with tracer.start_as_current_span(workflow.__name__) as span:
+        carrier: dict = {}
+        propagate.inject(carrier)
+        client = wf.DaprWorkflowClient()
+        instance = client.schedule_new_workflow(workflow, input={"arg": arg, "trace": carrier})
+        span.set_attribute("workflow.instance_id", instance)
+        state = client.wait_for_workflow_completion(instance, timeout_in_seconds=600)
+        trace_id = format(span.get_span_context().trace_id, "032x")
+    return {"instance": instance, "trace_id": trace_id, "status": state.runtime_status.name,
+            "result": json.loads(state.serialized_output or "null")}
 
 
 if __name__ == "__main__":
+    init_tracing()
     commands = {"ask": research, "order": order_status}  # app.py ask "<question>" | app.py order ORD-1001
     if sys.argv[1:2] and sys.argv[1] in commands:
         print(json.dumps(run(commands[sys.argv[1]], sys.argv[2])))
+        getattr(trace.get_tracer_provider(), "shutdown", lambda: None)()  # flush before exit
     else:
         runtime.start()
         signal.pause()
