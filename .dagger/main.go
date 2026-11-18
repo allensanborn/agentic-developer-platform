@@ -129,7 +129,24 @@ func (m *Ci) Scan(
 	return g.Wait()
 }
 
-// Check is the single CI entrypoint: lint, test, scan.
+// Boundaries verifies boundary_register.yaml: every identifier two components must agree on
+// (audience, ServiceAccount subjects, model aliases, secret names, labels) is the same literal
+// on both sides, at the cited line of a file whose sha256 is unchanged. No model, no cluster.
+func (m *Ci) Boundaries(
+	ctx context.Context,
+	// +defaultPath="/"
+	// +ignore=[".git", ".beads", ".scratch", ".devbox", ".kubeconfig"]
+	src *dagger.Directory,
+) (string, error) {
+	return dag.Container().From(pythonImage).
+		WithEnvVariable("PYTHONDONTWRITEBYTECODE", "1").
+		WithDirectory("/src", src).WithWorkdir("/src").
+		WithExec([]string{"pip", "install", "-q", "--no-cache-dir", "--require-hashes", "-r", "tools/boundary/requirements.txt"}).
+		WithExec([]string{"python", "tools/boundary/boundary.py", "verify"}).
+		Stdout(ctx)
+}
+
+// Check is the single CI entrypoint: lint, test, boundaries, scan.
 func (m *Ci) Check(
 	ctx context.Context,
 	// +defaultPath="/"
@@ -141,6 +158,7 @@ func (m *Ci) Check(
 	for _, dir := range []string{"agent", "erp/app"} {
 		g.Go(func() error { _, err := m.Test(ctx, src.Directory(dir)); return err })
 	}
+	g.Go(func() error { _, err := m.Boundaries(ctx, src.WithoutDirectory(".git")); return err })
 	g.Go(func() error { return m.Scan(ctx, src) })
 	return g.Wait()
 }

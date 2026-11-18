@@ -20,13 +20,13 @@ Scope: the platform as built, on one cluster. Method: STRIDE over the trust boun
 
 | # | Threat | Control | Verified |
 |---|---|---|---|
-| 1 | A compromised agent steals a provider key | The key is never in the agent's namespace, environment or filesystem; the gateway attaches it | smoke: key exists in one namespace |
-| 2 | A workload calls the gateway as someone else | ServiceAccount token: signed, audience-bound, one hour | smoke: missing and wrong-audience tokens get 401 |
-| 3 | An agent uses a model it should not (cost, data residency) | Allow-list per model; unlisted is denied | smoke: `intern` gets 403 on `smart` |
+| 1 | A compromised agent steals a provider key | The key is never in the agent's namespace, environment or filesystem; the gateway attaches it | smoke: key exists in one namespace; `boundary_register.yaml`: `provider-key-not-in-agents` |
+| 2 | A workload calls the gateway as someone else | ServiceAccount token: signed, audience-bound, one hour | smoke: missing and wrong-audience tokens get 401; `boundary_register.yaml`: `gateway-audience` |
+| 3 | An agent uses a model it should not (cost, data residency) | Allow-list per model; unlisted is denied | smoke: `intern` gets 403 on `smart`; `boundary_register.yaml`: `principal-*`, `alias-*` |
 | 4 | An agent bypasses the gateway to reach a model or the internet (exfiltration) | Default-deny egress in `agents`; models accept only the gateway | smoke: three blocked paths |
-| 5 | A workload in another namespace uses the gateway | Ingress only from labelled namespaces, then identity and allow-list | smoke: unlabelled namespace is blocked |
+| 5 | A workload in another namespace uses the gateway | Ingress only from labelled namespaces, then identity and allow-list | smoke: unlabelled namespace is blocked; `boundary_register.yaml`: `gateway-client-label` |
 | 6 | A looping or hijacked agent runs up the bill | Token budget per identity | by hand: 429 at a 30-token budget |
-| 7 | A stolen agent token is replayed | One-hour life; audience `ai-gateway` only; useless against the Kubernetes API | smoke: wrong audience rejected |
+| 7 | A stolen agent token is replayed | One-hour life; audience `ai-gateway` only; useless against the Kubernetes API | smoke: wrong audience rejected; `boundary_register.yaml`: `gateway-audience` |
 | 8 | A container escape or lateral move from an agent | Pod Security `restricted`, read-only root, no capabilities, no API token, seccomp | admission |
 | 9 | A tampered dependency or image | Images by digest, Python by hash, charts and actions by version or SHA; scans in CI | `dagger call check` |
 | 10 | A secret is committed | gitleaks over history and trivy over the tree in CI | `dagger call check` |
