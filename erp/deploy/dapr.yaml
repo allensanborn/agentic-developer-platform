@@ -1,0 +1,120 @@
+# What Dapr provides here: the durable workflow engine, its state store, the executor's
+# database binding, and the rules for which app may ask which other app to do what.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-credentials
+  namespace: erp
+stringData:
+  access-key: test
+  secret-key: test
+---
+# Apps in one multi-app workflow must share a namespace and this state store.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: erp
+spec:
+  type: state.aws.dynamodb
+  version: v1
+  metadata:
+    - name: table
+      value: erp-workflow-state
+    - name: region
+      value: us-east-1
+    - name: endpoint
+      value: http://floci.aws.svc.cluster.local:4566
+    - name: accessKey
+      secretKeyRef: {name: aws-credentials, key: access-key}
+    - name: secretKey
+      secretKeyRef: {name: aws-credentials, key: secret-key}
+    - name: actorStateStore
+      value: "true"
+scopes:
+  - erp-controller
+  - erp-agent
+  - erp-executor
+---
+# The only path to a write: loaded by the executor's sidecar alone.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: erp-write
+  namespace: erp
+spec:
+  type: bindings.postgresql
+  version: v1
+  metadata:
+    - name: connectionString
+      secretKeyRef: {name: erp-db, key: executor-url}
+scopes:
+  - erp-executor
+---
+# The agent's read path: a role that can select and nothing else, loaded by its sidecar alone.
+# ponytail: a binding, not MCP tools behind the gateway; see ADR 0010 for why and when to change.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: erp-read
+  namespace: erp
+spec:
+  type: bindings.postgresql
+  version: v1
+  metadata:
+    - name: connectionString
+      secretKeyRef: {name: erp-db, key: reader-url}
+scopes:
+  - erp-agent
+---
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: erp
+  namespace: erp
+spec:
+  accessControl:
+    defaultAction: deny
+    trustDomain: public
+---
+# Workflow access is open until a policy exists, so each app gets one. The caller is
+# identified by its Sentry-issued mTLS identity, not by anything it says about itself.
+apiVersion: dapr.io/v1alpha1
+kind: WorkflowAccessPolicy
+metadata:
+  name: executor
+  namespace: erp
+scopes:
+  - erp-executor
+spec:
+  rules:
+    - callers:
+        - appID: erp-controller
+      activities:
+        - name: dry_run
+        - name: commit
+---
+apiVersion: dapr.io/v1alpha1
+kind: WorkflowAccessPolicy
+metadata:
+  name: agent
+  namespace: erp
+scopes:
+  - erp-agent
+spec:
+  rules:
+    - callers:
+        - appID: erp-controller
+      activities:
+        - name: diagnose
+---
+# No rules: no other app may start, signal, read or stop the controller's runs.
+apiVersion: dapr.io/v1alpha1
+kind: WorkflowAccessPolicy
+metadata:
+  name: controller
+  namespace: erp
+scopes:
+  - erp-controller
+spec:
+  rules: []

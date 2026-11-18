@@ -1,0 +1,85 @@
+# The stand-in ERP database. Only the executor's sidecar can reach it (networkpolicy.yaml),
+# and only as a role that can execute two functions (erp/db/30-roles.sh).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chinook
+  namespace: erp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: chinook
+  template:
+    metadata:
+      labels:
+        app: chinook
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: adp/chinook:dev
+          imagePullPolicy: Never
+          # Logical replication is what change detection reads (ADR 0005).
+          args: ["-c", "wal_level=logical"]
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: erp-db, key: postgres-password}}
+            - name: ERP_EXECUTOR_PASSWORD
+              valueFrom: {secretKeyRef: {name: erp-db, key: executor-password}}
+            - name: ERP_READER_PASSWORD
+              valueFrom: {secretKeyRef: {name: erp-db, key: reader-password}}
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            # TCP, so it is not ready while the init scripts run on the unix socket.
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "chinook"]
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: run, mountPath: /var/run/postgresql}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        # ponytail: sample data on an emptyDir, so a pod restart is a clean Chinook. Use a
+        # PVC once something (a replication slot, an audit trail) must outlive the pod.
+        - name: data
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chinook
+  namespace: erp
+spec:
+  selector:
+    app: chinook
+  ports:
+    - port: 5432

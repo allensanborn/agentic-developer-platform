@@ -1,0 +1,333 @@
+# Generated records: edit ids, values, paths and lines; then run
+#   python tools/boundary/boundary.py refresh
+# Never hand-edit a sha256. See docs/boundary-register.md.
+schema: boundary-register/1
+entries:
+- id: gateway-audience
+  kind: audience
+  relation: equal
+  description: The gateway accepts only tokens minted for this audience; each caller's projected ServiceAccount token must request it, or every call is a 401.
+  sides:
+  - party: gateway
+    role: defines
+    value: ai-gateway
+    records:
+    - kind: file
+      path: platform/gateway/caller-identity.yaml
+      line: 24
+      sha256: eacc7c3ef4453c82c7bb27ae92a7a16c8d3f23cd2daea24d51339d97f2636d91
+  - party: research-agent
+    role: presents
+    value: ai-gateway
+    records:
+    - kind: file
+      path: platform/agents/research-agent.yaml
+      line: 56
+      sha256: ac4dd929905ff96b85494ca70dc6ae2438d3ad3039efe90692fb3965202d5ffe
+  - party: erp-agent
+    role: presents
+    value: ai-gateway
+    records:
+    - kind: file
+      path: erp/deploy/workloads.yaml
+      line: 120
+      sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c
+- id: principal-research-agent
+  kind: principal
+  relation: equal
+  description: ServiceAccount name; the gateway allow-lists it as the <name> in jwt.sub == system:serviceaccount:<ns>:<name>. A rename on either side is a silent 403.
+  sides:
+  - party: platform
+    role: defines
+    value: research-agent
+    records:
+    - kind: file
+      path: platform/agents/base.yaml
+      line: 6
+      sha256: 3688a627f3548923bca30c02e841a29d7ac5cfc071ebe5b1f8d78778fd01f753
+  - party: gateway
+    role: consumes
+    value: research-agent
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 32
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 58
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 85
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+- id: principal-erp-agent
+  kind: principal
+  relation: equal
+  description: ServiceAccount name; the <name> in the gateway's jwt.sub allow-list on all three models.
+  sides:
+  - party: erp
+    role: defines
+    value: erp-agent
+    records:
+    - kind: file
+      path: erp/deploy/workloads.yaml
+      line: 60
+      sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c
+  - party: gateway
+    role: consumes
+    value: erp-agent
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 33
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 59
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 86
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+- id: principal-intern
+  kind: principal
+  relation: equal
+  description: ServiceAccount name; the <name> in the gateway's jwt.sub allow-list, on the local model only.
+  sides:
+  - party: platform
+    role: defines
+    value: intern
+    records:
+    - kind: file
+      path: platform/agents/base.yaml
+      line: 14
+      sha256: 3688a627f3548923bca30c02e841a29d7ac5cfc071ebe5b1f8d78778fd01f753
+  - party: gateway
+    role: consumes
+    value: intern
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 34
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+- id: principal-namespace-agents
+  kind: principal
+  relation: equal
+  description: Namespace of the agents ServiceAccounts; the <ns> in the gateway's jwt.sub allow-list.
+  sides:
+  - party: platform
+    role: defines
+    value: agents
+    records:
+    - kind: file
+      path: platform/agents/base.yaml
+      line: 7
+      sha256: 3688a627f3548923bca30c02e841a29d7ac5cfc071ebe5b1f8d78778fd01f753
+    - kind: file
+      path: platform/agents/base.yaml
+      line: 15
+      sha256: 3688a627f3548923bca30c02e841a29d7ac5cfc071ebe5b1f8d78778fd01f753
+  - party: gateway
+    role: consumes
+    value: agents
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 32
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 34
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 58
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 85
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+- id: principal-namespace-erp
+  kind: principal
+  relation: equal
+  description: Namespace of the erp-agent ServiceAccount; the <ns> in the gateway's jwt.sub allow-list.
+  sides:
+  - party: erp
+    role: defines
+    value: erp
+    records:
+    - kind: file
+      path: erp/deploy/workloads.yaml
+      line: 61
+      sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c
+  - party: gateway
+    role: consumes
+    value: erp
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 33
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 59
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 86
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+- id: alias-fast
+  kind: name
+  relation: equal
+  description: Public model alias; agents send it as the request's model. An unknown alias is a 404 at runtime.
+  sides:
+  - party: gateway
+    role: defines
+    value: fast
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 105
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+  - party: research-agent
+    role: consumes
+    value: fast
+    records:
+    - kind: file
+      path: agent/app.py
+      line: 56
+      sha256: b6d5f44bf806aba6a6f0faff3837b4829cd21d0076da09d3341386549eeeb3cc
+- id: alias-smart
+  kind: name
+  relation: equal
+  description: Public model alias; agents send it as the request's model. An unknown alias is a 404 at runtime.
+  sides:
+  - party: gateway
+    role: defines
+    value: smart
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 124
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+  - party: research-agent
+    role: consumes
+    value: smart
+    records:
+    - kind: file
+      path: agent/app.py
+      line: 61
+      sha256: b6d5f44bf806aba6a6f0faff3837b4829cd21d0076da09d3341386549eeeb3cc
+  - party: erp-agent
+    role: consumes
+    value: smart
+    records:
+    - kind: file
+      path: erp/app/graph.py
+      line: 19
+      sha256: 8f4f12d8e942dfea6173886c5fa45d225b62265c97d425c1088e71b423672fd3
+- id: provider-key-secret
+  kind: secret
+  relation: equal
+  description: Kubernetes Secret that External Secrets writes and the gateway attaches to hosted-provider calls.
+  sides:
+  - party: secrets
+    role: defines
+    value: openrouter-apikey
+    records:
+    - kind: file
+      path: platform/secrets/provider-keys.yaml
+      line: 47
+      sha256: dfe87eba098778d2a1084c5b47c91e868158dcadbda0f772ca9be7109b09ede5
+  - party: gateway
+    role: consumes
+    value: openrouter-apikey
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 89
+      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+- id: provider-key-remote-ref
+  kind: secret
+  relation: equal
+  description: Secrets Manager secret id that up.sh creates and External Secrets reads.
+  sides:
+  - party: bootstrap
+    role: defines
+    value: adp/providers/openrouter
+    records:
+    - kind: file
+      path: scripts/up.sh
+      line: 45
+      sha256: 60840629f4e748d6f66770d3f04d91ae1f073fda7385fb6a70ead823b1453ca2
+  - party: secrets
+    role: consumes
+    value: adp/providers/openrouter
+    records:
+    - kind: file
+      path: platform/secrets/provider-keys.yaml
+      line: 51
+      sha256: dfe87eba098778d2a1084c5b47c91e868158dcadbda0f772ca9be7109b09ede5
+- id: gateway-client-label
+  kind: label
+  relation: equal
+  description: Namespace label the gateway's NetworkPolicy admits ingress from; a namespace without it cannot reach the gateway.
+  sides:
+  - party: gateway
+    role: grants
+    value: adp.dev/ai-gateway-client
+    records:
+    - kind: file
+      path: platform/gateway/networkpolicy.yaml
+      line: 17
+      sha256: 5d45a6e44de416697c7b8e22e99ad88939ab3153efb2ca308764f194b4b4891a
+  - party: platform
+    role: presents
+    value: adp.dev/ai-gateway-client
+    records:
+    - kind: file
+      path: platform/namespaces.yaml
+      line: 33
+      sha256: bcab1cd5fe5f016bd6f5ec617088bdc5663a4ae0b2219f140c451f6f12b870d1
+  - party: erp
+    role: presents
+    value: adp.dev/ai-gateway-client
+    records:
+    - kind: file
+      path: erp/deploy/namespace.yaml
+      line: 7
+      sha256: f9aa0d873984378b25a539f9b0c56d15d1096a6a36a559ff068eea8732628702
+- id: provider-key-not-in-agents
+  kind: secret
+  relation: absent
+  description: 'Threat 1: the provider key''s Secret is never referenced from an agent''s manifests (no env, volume or secretKeyRef). Static half of the smoke check ''key exists in one namespace''.'
+  sides:
+  - party: secrets
+    role: presents
+    value: openrouter-apikey
+    records:
+    - kind: file
+      path: platform/secrets/provider-keys.yaml
+      line: 47
+      sha256: dfe87eba098778d2a1084c5b47c91e868158dcadbda0f772ca9be7109b09ede5
+  - party: research-agent
+    role: denies
+    value: openrouter-apikey
+    records:
+    - kind: file
+      path: platform/agents/base.yaml
+      line: 1
+      sha256: 3688a627f3548923bca30c02e841a29d7ac5cfc071ebe5b1f8d78778fd01f753
+    - kind: file
+      path: platform/agents/research-agent.yaml
+      line: 1
+      sha256: ac4dd929905ff96b85494ca70dc6ae2438d3ad3039efe90692fb3965202d5ffe
+  - party: erp-agent
+    role: denies
+    value: openrouter-apikey
+    records:
+    - kind: file
+      path: erp/deploy/workloads.yaml
+      line: 1
+      sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c

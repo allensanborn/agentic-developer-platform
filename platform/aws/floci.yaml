@@ -111,6 +111,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: agents
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: erp
         - podSelector:
             matchLabels:
               app: aws-admin

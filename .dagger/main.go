@@ -42,27 +42,29 @@ func (m *Ci) Lint(
 	g.Go(func() error {
 		_, err := dag.Container().From(hadolintImage).
 			WithDirectory("/src", src).WithWorkdir("/src").
-			WithExec([]string{"hadolint", "agent/Dockerfile"}).Sync(ctx)
+			WithExec([]string{"hadolint", "agent/Dockerfile", "erp/app/Dockerfile", "erp/db/Dockerfile"}).Sync(ctx)
 		return err
 	})
 	g.Go(func() error {
 		rendered := dag.Container().From(kustomizeImage).
 			WithDirectory("/src", src).WithWorkdir("/src").
-			WithExec([]string{"kustomize", "build", "platform", "-o", "/rendered.yaml"}).
-			File("/rendered.yaml")
+			WithDirectory("/rendered", dag.Directory()).
+			WithExec([]string{"kustomize", "build", "platform", "-o", "/rendered/platform.yaml"}).
+			WithExec([]string{"kustomize", "build", "erp/deploy", "-o", "/rendered/erp.yaml"}).
+			Directory("/rendered")
 		// Built-in kinds are validated strictly. CRD kinds (agentgateway, Dapr, External
 		// Secrets) have no published schemas here and are validated by the API server
 		// when scripts/up.sh applies them.
 		_, err := dag.Container().From(kubeconformImage).
-			WithFile("/rendered.yaml", rendered).
-			WithExec([]string{"/kubeconform", "-strict", "-summary", "-ignore-missing-schemas", "/rendered.yaml"}).
+			WithDirectory("/rendered", rendered).
+			WithExec([]string{"/kubeconform", "-strict", "-summary", "-ignore-missing-schemas", "/rendered"}).
 			Sync(ctx)
 		return err
 	})
 	return g.Wait()
 }
 
-// Test runs the agent's unit tests against the hash-pinned dependencies.
+// Test runs one Python directory's unit tests against the hash-pinned dependencies.
 func (m *Ci) Test(
 	ctx context.Context,
 	// +defaultPath="/agent"
@@ -77,7 +79,7 @@ func (m *Ci) Test(
 		Stdout(ctx)
 }
 
-// Build the agent image from its Dockerfile.
+// Build an image from the Dockerfile in a directory.
 func (m *Ci) Build(
 	// +defaultPath="/agent"
 	src *dagger.Directory,
@@ -116,16 +118,35 @@ func (m *Ci) Scan(
 		_, err := trivy.WithExec(append([]string{"trivy", "fs", "--scanners", "vuln,secret"}, append(fail, ".")...)).Sync(ctx)
 		return err
 	})
-	g.Go(func() error { // the image that would ship
-		image := m.Build(src.Directory("agent")).AsTarball()
-		_, err := trivy.WithFile("/image.tar", image).
-			WithExec(append([]string{"trivy", "image", "--input", "/image.tar", "--ignore-unfixed"}, fail...)).Sync(ctx)
-		return err
-	})
+	for _, dir := range []string{"agent", "erp/app", "erp/db"} { // the images that would ship
+		g.Go(func() error {
+			image := m.Build(src.Directory(dir)).AsTarball()
+			_, err := trivy.WithFile("/image.tar", image).
+				WithExec(append([]string{"trivy", "image", "--input", "/image.tar", "--ignore-unfixed"}, fail...)).Sync(ctx)
+			return err
+		})
+	}
 	return g.Wait()
 }
 
-// Check is the single CI entrypoint: lint, test, scan.
+// Boundaries verifies boundary_register.yaml: every identifier two components must agree on
+// (audience, ServiceAccount subjects, model aliases, secret names, labels) is the same literal
+// on both sides, at the cited line of a file whose sha256 is unchanged. No model, no cluster.
+func (m *Ci) Boundaries(
+	ctx context.Context,
+	// +defaultPath="/"
+	// +ignore=[".git", ".beads", ".scratch", ".devbox", ".kubeconfig"]
+	src *dagger.Directory,
+) (string, error) {
+	return dag.Container().From(pythonImage).
+		WithEnvVariable("PYTHONDONTWRITEBYTECODE", "1").
+		WithDirectory("/src", src).WithWorkdir("/src").
+		WithExec([]string{"pip", "install", "-q", "--no-cache-dir", "--require-hashes", "-r", "tools/boundary/requirements.txt"}).
+		WithExec([]string{"python", "tools/boundary/boundary.py", "verify"}).
+		Stdout(ctx)
+}
+
+// Check is the single CI entrypoint: lint, test, boundaries, scan.
 func (m *Ci) Check(
 	ctx context.Context,
 	// +defaultPath="/"
@@ -134,7 +155,10 @@ func (m *Ci) Check(
 ) error {
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error { return m.Lint(ctx, src.WithoutDirectory(".git")) })
-	g.Go(func() error { _, err := m.Test(ctx, src.Directory("agent")); return err })
+	for _, dir := range []string{"agent", "erp/app"} {
+		g.Go(func() error { _, err := m.Test(ctx, src.Directory(dir)); return err })
+	}
+	g.Go(func() error { _, err := m.Boundaries(ctx, src.WithoutDirectory(".git")); return err })
 	g.Go(func() error { return m.Scan(ctx, src) })
 	return g.Wait()
 }

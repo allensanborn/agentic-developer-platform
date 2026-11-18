@@ -1,0 +1,10 @@
+# The ERP discrepancy agent: a tenant of the platform, deployed after `platform`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - chinook.yaml
+  - dapr.yaml
+  - workloads.yaml
+  - networkpolicy.yaml
