@@ -1,0 +1,39 @@
+# Renovate runs as a Dagger function (ADR 0012), on the same pinned image a laptop uses.
+# The token is a GitHub App installation token minted per run (one hour, this repo only),
+# not a stored PAT: pull requests opened with the workflow's own GITHUB_TOKEN would not
+# trigger CI, and a long-lived PAT is the credential GTIG/Mandiant tell you to retire.
+name: renovate
+on:
+  schedule:
+    - cron: "17 9 * * *" # daily; renovate.json5 holds ordinary updates to Monday, security fixes go any day
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-workflows: write
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        env:
+          RENOVATE_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          version: 0.21.11
+          verb: call
+          args: renovate --token=env:RENOVATE_TOKEN --pull-requests --repository=${{ github.repository }}

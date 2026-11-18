@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"dagger/ci/internal/dagger"
 
@@ -21,6 +22,7 @@ const (
 	trivyImage       = "aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb"
 	gitleaksImage    = "zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
 	pythonImage      = "python:3.13-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72"
+	renovateImage    = "renovate/renovate:44.216.2@sha256:435c302302f1db679e9b482f8dfd7e1e0c3b6938df44f9444780064c9a4d2c4f"
 )
 
 type Ci struct{}
@@ -147,7 +149,69 @@ func (m *Ci) Boundaries(
 		Stdout(ctx)
 }
 
-// Check is the single CI entrypoint: lint, test, boundaries, scan.
+// RenovateConfig validates renovate.json5 strictly. Offline, so it runs in every check.
+func (m *Ci) RenovateConfig(
+	ctx context.Context,
+	// +defaultPath="/renovate.json5"
+	config *dagger.File,
+) (string, error) {
+	return dag.Container().From(renovateImage).
+		WithFile("/src/renovate.json5", config).WithWorkdir("/src").
+		WithExec([]string{"renovate-config-validator", "--strict"}).
+		Stdout(ctx)
+}
+
+// Renovate proposes bumps for every pin renovate.json5 covers (ADR 0012). By default it reads
+// the source tree on Renovate's local platform and only logs what it would change; the token,
+// if given, is used for registry and GitHub lookups. With --pull-requests it runs against
+// GitHub instead and opens or updates pull requests, which needs a token that may do that.
+func (m *Ci) Renovate(
+	ctx context.Context,
+	// +defaultPath="/"
+	// +ignore=[".beads", ".scratch", ".devbox", ".kubeconfig", ".dagger/internal", ".dagger/dagger.gen.go"]
+	src *dagger.Directory,
+	// GitHub token. Read-only is enough for a local report; --pull-requests needs contents
+	// and pull-requests write on the repository.
+	// +optional
+	token *dagger.Secret,
+	// Open or update pull requests on GitHub instead of reporting locally.
+	// +optional
+	pullRequests bool,
+	// +optional
+	// +default="allensanborn/agentic-developer-platform"
+	repository string,
+) (string, error) {
+	renovate := dag.Container().From(renovateImage).
+		WithEnvVariable("LOG_LEVEL", "info").
+		// The slim image installs uv, go and helm on demand for lockfile updates.
+		WithEnvVariable("RENOVATE_BINARY_SOURCE", "install").
+		WithMountedCache("/tmp/renovate/cache", dag.CacheVolume("renovate"),
+			dagger.ContainerWithMountedCacheOpts{Owner: "12021"})
+	if pullRequests {
+		if token == nil {
+			return "", fmt.Errorf("--pull-requests needs --token")
+		}
+		return renovate.
+			WithSecretVariable("RENOVATE_TOKEN", token).
+			WithEnvVariable("RENOVATE_PLATFORM", "github").
+			WithEnvVariable("RENOVATE_REPOSITORIES", repository).
+			WithEnvVariable("RENOVATE_ONBOARDING", "false").
+			WithEnvVariable("RENOVATE_REQUIRE_CONFIG", "required").
+			WithExec([]string{"renovate"}).
+			Stdout(ctx)
+	}
+	if token != nil {
+		renovate = renovate.WithSecretVariable("RENOVATE_GITHUB_COM_TOKEN", token)
+	}
+	return renovate.
+		WithDirectory("/src", src, dagger.ContainerWithDirectoryOpts{Owner: "12021"}).WithWorkdir("/src").
+		WithEnvVariable("RENOVATE_PLATFORM", "local").
+		WithEnvVariable("RENOVATE_REPORT_TYPE", "logging").
+		WithExec([]string{"renovate"}).
+		Stdout(ctx)
+}
+
+// Check is the single CI entrypoint: lint, test, boundaries, Renovate config, scan.
 func (m *Ci) Check(
 	ctx context.Context,
 	// +defaultPath="/"
@@ -160,6 +224,7 @@ func (m *Ci) Check(
 		g.Go(func() error { _, err := m.Test(ctx, src.Directory(dir)); return err })
 	}
 	g.Go(func() error { _, err := m.Boundaries(ctx, src.WithoutDirectory(".git")); return err })
+	g.Go(func() error { _, err := m.RenovateConfig(ctx, src.File("renovate.json5")); return err })
 	g.Go(func() error { return m.Scan(ctx, src) })
 	return g.Wait()
 }
