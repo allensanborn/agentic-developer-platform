@@ -94,7 +94,10 @@ func (m *Ci) Scan(
 	src *dagger.Directory,
 ) error {
 	trivy := dag.Container().From(trivyImage).
-		WithMountedCache("/root/.cache/trivy", dag.CacheVolume("trivy-db")).
+		// Locked: one scan at a time holds the DB. Five parallel scans sharing it crashed trivy
+		// (SIGSEGV/SIGBUS in bbolt) on Dagger 0.21.11, arm64.
+		WithMountedCache("/root/.cache/trivy", dag.CacheVolume("trivy-db"),
+			dagger.ContainerWithMountedCacheOpts{Sharing: dagger.CacheSharingModeLocked}).
 		WithDirectory("/src", src.WithoutDirectory(".git")).WithWorkdir("/src")
 	fail := []string{"--exit-code", "1", "--severity", "HIGH,CRITICAL", "--quiet"}
 
