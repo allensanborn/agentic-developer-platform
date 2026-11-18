@@ -32,6 +32,7 @@ Scope: the platform as built, on one cluster. Method: STRIDE over the trust boun
 | 10 | A secret is committed | gitleaks over history and trivy over the tree in CI | `dagger call check` |
 | 11 | Provider outage takes agents down | Failover to a local model | smoke: `smart` answers on fallback |
 | 12 | A leaked provider key stays valid | Rotation is one command, live in about a minute | by hand: 45 s |
+| 13 | A known-vulnerable pinned version stays deployed (n-day window measured in days) | Renovate bumps every pin; known-vulnerable versions skip the release-age wait and the schedule (ADR 0012) | `dagger call check`: `RenovateConfig`; `dagger call renovate` reports pending bumps |
 
 ## Open risks
 

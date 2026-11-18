@@ -50,7 +50,8 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
 scripts/smoke.sh                    # 14 end-to-end security checks
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
-dagger call check                   # lint, unit tests, boundary register, secret/misconfig/vulnerability scans
+dagger call check                   # lint, unit tests, boundary register, Renovate config, secret/misconfig/vulnerability scans
+dagger call renovate --token=cmd://"gh auth token"   # what Renovate would bump (no PRs; ADR 0012)
 k3d cluster delete adp              # tear down
 ```
 

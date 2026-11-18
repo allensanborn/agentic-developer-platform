@@ -39,6 +39,7 @@ The design follows practices recorded in the maintainer's notes and three earlie
 | Expose intent-level capabilities to agents, not raw infrastructure | partly: aliases are intent; a self-service "Agent" capability is open | maintainer notes |
 | Put policy inside the capability | built: access and budget are in the gateway, not in agent code or prompts | same; maintainer notes |
 | Pin tool versions; make the environment reproducible from zero | built: `versions.env`, digests, `devbox.lock`; `up.sh` from an empty cluster | maintainer notes |
+| Pinning is not patching: bump every pin automatically, fast-track known-vulnerable versions | built: `dagger call renovate` (ADR 0012); App not yet created | maintainer notes |
 | Guardrails should explain, not just refuse | open: denials are bare 401/403/429 | maintainer notes |
 
 ## From earlier repositories
