@@ -48,7 +48,7 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 
 ```sh
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
-scripts/smoke.sh                    # 16 end-to-end security checks (one skips without a host model)
+scripts/smoke.sh                    # 17 end-to-end security checks (one skips without a host model)
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
 dagger call check                   # lint, unit tests, boundary register, secret/misconfig/vulnerability scans
 k3d cluster delete adp              # tear down
@@ -74,13 +74,18 @@ The order tools from AWS's *Secure AI Agents on Amazon EKS* workshop (labs 3 and
 
 ```sh
 scripts/tools-up.sh     # after up.sh: image, orders table, server, route, policy
-scripts/tools-smoke.sh  # 18 checks: identity, visibility, calls, the agent's tool workflow, isolation
+scripts/tools-smoke.sh  # 20 checks: identity, visibility, calls, the agent's tool workflow, isolation
 kubectl exec -n agents deploy/research-agent -c agent -- python app.py order ORD-1001
 ```
 
 The sample agent's `order_status` workflow calls `lookup_order` as a workflow activity, like a model call: recorded, so a resumed run does not repeat it. Its MCP client is about forty lines of standard library (`agent/app.py`), and the gateway, not the agent, decides which tools it has.
 
-Not built yet: the prompt-injection controls tool output needs (adp-2id).
+Tool output is data, not instructions. Two layers, tested with a hostile record (`ORD-6666`, whose customer name tells the model to approve a refund):
+
+- **Structural (the defense):** the record reaches a model step that has no tools, framed as data in a system message and a delimited block, and whose only output is reply text. A successful injection can word a reply badly; it cannot act.
+- **Gateway prompt guard (a tripwire):** `platform/gateway/guardrails.yaml` rejects requests carrying known injection phrases before any model sees them (403, logged). It catches only the phrasings it lists.
+
+With the guard removed, the local 3B model given the hostile record wrote a plain shipping reply in 4 of 4 runs; that is a small sample, not a guarantee. Not built: an output-side check of what a reply may claim, and a classifier-grade guard (the policy also takes a webhook, OpenAI Moderation, Bedrock Guardrails or Model Armor).
 
 ## ERP discrepancy agent (branch `erp-discrepancy-agent`)
 
