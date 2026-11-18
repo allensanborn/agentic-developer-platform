@@ -228,8 +228,8 @@ entries:
     records:
     - kind: file
       path: agent/app.py
-      line: 56
-      sha256: b6d5f44bf806aba6a6f0faff3837b4829cd21d0076da09d3341386549eeeb3cc
+      line: 119
+      sha256: 92d17cdd7b06433a12b7e3d9974c2dea4c3ce2914ecf75239d781a883c6f48a6
 - id: alias-smart
   kind: name
   relation: equal
@@ -249,8 +249,12 @@ entries:
     records:
     - kind: file
       path: agent/app.py
-      line: 61
-      sha256: b6d5f44bf806aba6a6f0faff3837b4829cd21d0076da09d3341386549eeeb3cc
+      line: 124
+      sha256: 92d17cdd7b06433a12b7e3d9974c2dea4c3ce2914ecf75239d781a883c6f48a6
+    - kind: file
+      path: agent/app.py
+      line: 109
+      sha256: 92d17cdd7b06433a12b7e3d9974c2dea4c3ce2914ecf75239d781a883c6f48a6
   - party: erp-agent
     role: consumes
     value: smart
@@ -437,7 +441,7 @@ entries:
     - kind: file
       path: scripts/tools-smoke.sh
       line: 9
-      sha256: f4ea6071c222348f1e4840770829d1fe96c3d0b48e147d05715ee35a2bb17550
+      sha256: 8ff34bf5be5f6ff76b363b5cf28217201f5e08ac62a1c6b912e895967da506ab
 - id: orders-table
   kind: table
   relation: equal
