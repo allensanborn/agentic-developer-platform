@@ -8,7 +8,7 @@
 |---|---|---|---|
 | `gateway-audience` | `caller-identity.yaml` `audiences` | each agent's projected token `audience` | 401 on every call |
 | `principal-*` (3 names, 2 namespaces) | ServiceAccount `name` / `namespace` | the `<ns>` and `<name>` in each `jwt.sub` allow-list in `models.yaml` | silent 403 |
-| `alias-fast`, `alias-smart` | `AgentgatewayModel` name | the alias in `agent/app.py`, `erp/app/graph.py` | 404 |
+| `alias-fast`, `alias-smart`, `alias-scripted` | `AgentgatewayModel` name | the alias in `agent/app.py`, `erp/app/graph.py`, `scripts/erp-smoke.sh` | 404 |
 | `provider-key-secret` | ExternalSecret target | gateway `auth.secretRef` | hosted model fails, failover hides it |
 | `provider-key-remote-ref` | `up.sh` create-secret | ExternalSecret `remoteRef.key` | key never syncs |
 | `gateway-client-label` | gateway NetworkPolicy | namespace labels | connection timeout |

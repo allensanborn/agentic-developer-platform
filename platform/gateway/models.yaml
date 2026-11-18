@@ -175,3 +175,45 @@ spec:
         - modelRef:
             name: llama-3b
           priority: 2
+---
+# --- Internal: scripted model (platform/models/scripted.yaml). One fixed diagnosis, for
+# checking the ERP mechanics without a real model. Only the ERP agent may reach it.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: scripted-model
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  visibility: Internal
+  provider: OpenAI
+  baseURL: http://scripted-model.models.svc.cluster.local:11434/v1
+  policies:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - 'jwt.sub == "system:serviceaccount:erp:erp-agent"'
+---
+# --- Public alias: scripted. Used by scripts/erp-smoke.sh unless ERP_SMOKE_ALIAS says otherwise.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: scripted
+  namespace: ai-gateway
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  virtualModel:
+    weighted:
+      targets:
+        - modelRef:
+            name: scripted-model
+          weight: 1

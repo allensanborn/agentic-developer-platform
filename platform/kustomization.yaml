@@ -6,6 +6,7 @@ resources:
   - gateway/models.yaml
   - gateway/networkpolicy.yaml
   - models/ollama.yaml
+  - models/scripted.yaml
   - agents/base.yaml
   - agents/research-agent.yaml
   - aws/floci.yaml
