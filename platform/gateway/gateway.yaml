@@ -44,3 +44,14 @@ spec:
         kinds:
           - group: agentgateway.dev
             kind: AgentgatewayModel
+    # MCP tools (tools/deploy/, opt-in via scripts/tools-up.sh). A port of its own, so the
+    # network policies and the tool hop's policies never overlap with the model hop's.
+    - name: mcp
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: Same
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
