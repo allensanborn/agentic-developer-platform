@@ -2,13 +2,27 @@
 # End-to-end check of what the ERP discrepancy agent claims, against the live cluster:
 # a fix is applied only after a named approver approves that exact proposal, and nothing
 # but the executor can change the data.
+#
+# The agent diagnoses with the `scripted` alias by default: one fixed answer, so these
+# mechanics are checked without a real model (adp-ctc). ERP_SMOKE_ALIAS=smart runs the same
+# checks against a real model.
 set -uo pipefail
 # shellcheck source=scripts/env.sh
 . "$(dirname "$0")/env.sh"
 
 RULE=invoice_total_mismatch
 EP=$(date +%s) # a fresh episode per smoke run, so reruns never collide with old runs
+ALIAS=${ERP_SMOKE_ALIAS:-"scripted"}
 fails=0
+
+agent_alias() { # alias, or "-" to restore the default
+  if [ "$1" = - ]; then set -- DIAGNOSIS_ALIAS-; else set -- "DIAGNOSIS_ALIAS=$1"; fi
+  kubectl set env -n erp deploy/erp-agent -c app "$1" >/dev/null
+  kubectl rollout status -n erp deploy/erp-agent --timeout=3m >/dev/null
+}
+trap 'agent_alias -' EXIT
+agent_alias "$ALIAS"
+echo "diagnosing with alias: $ALIAS"
 
 check() { # description, expected, actual
   if [ "$2" = "$3" ]; then echo "PASS  $1"; else echo "FAIL  $1 (expected $2, got $3)"; fails=$((fails + 1)); fi

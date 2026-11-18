@@ -1,0 +1,125 @@
+# A scripted model: answers every chat completion with one fixed diagnosis, so the ERP
+# mechanics (approval, rejection, isolation) can be checked without a real model (adp-ctc).
+# It sits behind the gateway like any model, as alias `scripted`, so the check still goes
+# through caller identity, the allow-list and routing; only the model's judgement is fake.
+# The answer fits every discrepancy scripts/erp-smoke.sh seeds (total = lines + 5).
+# Not a test of diagnosis quality: that is the eval gate (adp-5gs).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scripted-model
+  namespace: models
+data:
+  server.py: |
+    import json
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    ANSWER = {"kind": "fix", "fix_type": "set_invoice_total_from_lines", "params": {},
+              "evidence": "scripted: every line matches its track, so the total is wrong"}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):  # readiness
+            self.send_response(200)
+            self.end_headers()
+
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            out = json.dumps({
+                "id": "scripted", "object": "chat.completion", "model": body.get("model", "scripted"),
+                "choices": [{"index": 0, "finish_reason": "stop",
+                             "message": {"role": "assistant", "content": json.dumps(ANSWER)}}],
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            }).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(out)))
+            self.end_headers()
+            self.wfile.write(out)
+
+    HTTPServer(("", 11434), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scripted-model
+  namespace: models
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scripted-model
+  template:
+    metadata:
+      labels:
+        app: scripted-model
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: model
+          # The same pinned base the agent images use; nothing to build.
+          image: python:3.13-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72
+          command: ["python", "-u", "/app/server.py"]
+          ports:
+            - containerPort: 11434
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 11434
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: app
+              mountPath: /app
+      volumes:
+        - name: app
+          configMap:
+            name: scripted-model
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scripted-model
+  namespace: models
+spec:
+  selector:
+    app: scripted-model
+  ports:
+    - port: 11434
+---
+# In: only the gateway. Out: nothing.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: scripted-model
+  namespace: models
+spec:
+  podSelector:
+    matchLabels:
+      app: scripted-model
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: ai-gateway
+      ports:
+        - port: 11434

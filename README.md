@@ -86,12 +86,12 @@ flowchart LR
 ```bash
 scripts/up.sh         # the platform
 scripts/erp-up.sh     # this tenant
-scripts/erp-smoke.sh
+scripts/erp-smoke.sh  # the mechanics, with a scripted model; ERP_SMOKE_ALIAS=smart for a real one
 ```
 
 Built so far: the three workloads, access policies, typed fixes enforced by database roles, approval bound to a proposal hash, deadlines with escalation, and the LangGraph diagnosis graph (gather facts, model chooses a declared fix, validate).
 
-A run against a real model needs the host's Ollama (see Run it) or a hosted provider key: the in-cluster CPU models generate under one token per second, so a diagnosis times out. With the host's `llama3.2:3b` (about 120 tokens per second on the development machine), `scripts/erp-smoke.sh` passes in under a minute. Without a model it cannot pass at all (adp-ctc).
+A run against a real model needs the host's Ollama (see Run it) or a hosted provider key: the in-cluster CPU models generate under one token per second, so a diagnosis times out. With the host's `llama3.2:3b` (about 120 tokens per second on the development machine), `ERP_SMOKE_ALIAS=smart scripts/erp-smoke.sh` passes in under a minute. Without one, `scripts/erp-smoke.sh` still checks every mechanism: by default the agent diagnoses through the `scripted` alias, a model behind the gateway that gives one fixed answer (`platform/models/scripted.yaml`).
 
 Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate.
 
