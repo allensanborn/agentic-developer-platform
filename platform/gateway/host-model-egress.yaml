@@ -1,0 +1,22 @@
+# Development only: lets the gateway reach Ollama on the host (models.yaml llama-3b-host),
+# which runs on the host's GPU instead of the cluster's CPU. Adds to networkpolicy.yaml
+# (policies are additive). Applied by scripts/up.sh, which fills in __HOST_IP__ with the
+# address host.docker.internal resolves to inside the cluster (OrbStack 0.250.250.254,
+# Docker Desktop 192.168.65.254), and skips this file where that name does not resolve.
+# Not in kustomization.yaml: a cluster without a host model has no reason to allow it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-gateway-host-model
+  namespace: ai-gateway
+spec:
+  podSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: ai-gateway
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: __HOST_IP__/32
+      ports:
+        - port: 11434

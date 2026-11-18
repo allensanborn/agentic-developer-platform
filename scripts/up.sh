@@ -36,6 +36,16 @@ kubectl apply -k platform
 # reference to the API server removes the step (tracked in beads).
 sed "s|__CLUSTER_JWKS__|$(kubectl get --raw /openid/v1/jwks)|" platform/gateway/caller-identity.yaml |
   kubectl apply -f -
+# Host model (development): allow the gateway to reach the host's Ollama at the address
+# host.docker.internal resolves to in the cluster. Where it does not resolve (Linux Docker
+# without host-gateway), `smart` skips the host model and fails over to the cluster's.
+host_ip=$(docker exec "k3d-$CLUSTER-server-0" nslookup host.docker.internal 2>/dev/null |
+  awk '/^Name:/ {found = 1} found && /^Address/ {print $2; exit}')
+if [ -n "$host_ip" ]; then
+  sed "s|__HOST_IP__|$host_ip|" platform/gateway/host-model-egress.yaml | kubectl apply -f -
+else
+  echo "host.docker.internal does not resolve in the cluster; no host model" >&2
+fi
 
 # AWS resources. ponytail: imperative and create-if-missing; the production form is a
 # Terraform root applied unchanged to floci and AWS (tracked in beads).

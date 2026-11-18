@@ -56,7 +56,7 @@ k3d cluster delete adp              # tear down
 
 `up.sh` writes a repo-local `.kubeconfig` and leaves yours alone: `export KUBECONFIG=$PWD/.kubeconfig`.
 
-Without a provider key, `smart` is served by the local fallback. Ask the agent something:
+Without a provider key, `smart` is served by a local model: the host's Ollama when it is running (`ollama pull llama3.2:3b && ollama serve`; the cluster reaches it at `host.docker.internal`), otherwise the in-cluster one, which on CPU is too slow for the ERP agent. Ask the agent something:
 
 ```sh
 kubectl exec -n agents deploy/research-agent -c agent -- python app.py ask "Why is the sky blue?"
@@ -91,7 +91,7 @@ scripts/erp-smoke.sh
 
 Built so far: the three workloads, access policies, typed fixes enforced by database roles, approval bound to a proposal hash, deadlines with escalation, and the LangGraph diagnosis graph (gather facts, model chooses a declared fix, validate).
 
-Not working yet: a run against a real model. The in-cluster CPU models generate under one token per second on the development machine, so a diagnosis times out and `scripts/erp-smoke.sh` cannot pass until a faster model is routed (a hosted provider key, or a GPU-backed local model). The smoke test last passed with a stub agent at commit `bfcf172`.
+A run against a real model needs the host's Ollama (see Run it) or a hosted provider key: the in-cluster CPU models generate under one token per second, so a diagnosis times out. With the host's `llama3.2:3b` (about 120 tokens per second on the development machine), `scripts/erp-smoke.sh` passes in under a minute. Without a model it cannot pass at all (adp-ctc).
 
 Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate.
 

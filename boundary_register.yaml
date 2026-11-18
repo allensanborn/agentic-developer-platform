@@ -52,19 +52,23 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 32
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
       line: 58
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
-      line: 85
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 86
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 119
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
 - id: principal-erp-agent
   kind: principal
   relation: equal
-  description: ServiceAccount name; the <name> in the gateway's jwt.sub allow-list on all three models.
+  description: ServiceAccount name; the <name> in the gateway's jwt.sub allow-list on every model it may use.
   sides:
   - party: erp
     role: defines
@@ -81,15 +85,19 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 33
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
       line: 59
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
-      line: 86
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 87
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 120
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
 - id: principal-intern
   kind: principal
   relation: equal
@@ -110,7 +118,7 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 34
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
 - id: principal-namespace-agents
   kind: principal
   relation: equal
@@ -135,19 +143,23 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 32
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
       line: 34
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
       line: 58
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
-      line: 85
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 86
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 119
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
 - id: principal-namespace-erp
   kind: principal
   relation: equal
@@ -168,15 +180,19 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 33
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
       line: 59
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
     - kind: file
       path: platform/gateway/models.yaml
-      line: 86
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 87
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 120
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
 - id: alias-fast
   kind: name
   relation: equal
@@ -188,8 +204,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 105
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 139
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
   - party: research-agent
     role: consumes
     value: fast
@@ -209,8 +225,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 124
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 158
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
   - party: research-agent
     role: consumes
     value: smart
@@ -246,8 +262,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 89
-      sha256: 5cdbab2cc10dd9ba474f0e374cbec8789a8b2b94ca36004074aba99cd9160b91
+      line: 123
+      sha256: ad875840445e4fa4aa91dd140fed637bf45b8127c2ef4450a9f111102059e67c
 - id: provider-key-remote-ref
   kind: secret
   relation: equal
@@ -259,8 +275,8 @@ entries:
     records:
     - kind: file
       path: scripts/up.sh
-      line: 45
-      sha256: 60840629f4e748d6f66770d3f04d91ae1f073fda7385fb6a70ead823b1453ca2
+      line: 55
+      sha256: e2238c338591669051653b71dbf8d8472fff20ea4f27885f62b79e53e3265298
   - party: secrets
     role: consumes
     value: adp/providers/openrouter
