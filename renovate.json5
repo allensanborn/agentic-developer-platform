@@ -1,0 +1,93 @@
+// Renovate keeps every pin in this repo moving: digest-pinned images, hash-locked Python,
+// SHA-pinned actions, Go modules and versions.env. It runs only as `dagger call renovate`
+// (ADR 0012); there is no hosted Renovate app on this repo.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended", "docker:pinDigests", "helpers:pinGitHubActionDigests"],
+  ignorePaths: [".scratch/**", ".devbox/**", ".dagger/internal/**"],
+  // Images this repo builds itself and imports into k3d; there is no registry to look up.
+  ignoreDeps: ["adp/research-agent", "adp/erp", "adp/chinook", "adp/orders-mcp"],
+
+  // Two risks pull opposite ways. A brand-new release may be a hijacked one (the TeamPCP
+  // PyPI compromise), so ordinary updates wait 3 days. A published patch is now an exploit
+  // hint within days (GTIG, Nov 2026: disclosure to LLM-built mass exploitation in four),
+  // so known-vulnerable versions skip both the wait and the schedule.
+  minimumReleaseAge: "3 days",
+  schedule: ["before 6am on monday"],
+  osvVulnerabilityAlerts: true,
+  vulnerabilityAlerts: { minimumReleaseAge: null, schedule: [], labels: ["security"] },
+  labels: ["dependencies"],
+  prConcurrentLimit: 10,
+
+  // Hash-locked requirements: regenerate the lock (and its hashes) from requirements.in.
+  "pip-compile": { managerFilePatterns: ["/(^|/)requirements\\.txt$/"] },
+  pip_requirements: { enabled: false },
+  kubernetes: { managerFilePatterns: ["/^(platform|erp|tools)/.+\\.yaml$/"] },
+  gomod: { postUpdateOptions: ["gomodTidy"] },
+
+  customManagers: [
+    {
+      // image:tag@sha256:… literals in the Dagger module and the shell scripts.
+      customType: "regex",
+      description: "Pinned image references outside Dockerfiles and manifests",
+      managerFilePatterns: ["/^\\.dagger/main\\.go$/", "/^scripts/.+\\.sh$/"],
+      matchStrings: [
+        "(?<depName>[a-z0-9][a-z0-9._/-]*[a-z0-9]):(?<currentValue>[A-Za-z0-9._-]+)@(?<currentDigest>sha256:[a-f0-9]{64})",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      // versions.env: each line carries a `# renovate:` comment naming its source.
+      customType: "regex",
+      description: "versions.env",
+      managerFilePatterns: ["/^versions\\.env$/"],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( registryUrl=(?<registryUrl>\\S+))?( versioning=(?<versioning>\\S+))?\\n[A-Z0-9_]+=(?:\\S+:)?(?<currentValue>[^\\s:]+)",
+      ],
+    },
+    {
+      // The Dagger engine version appears twice and must move together.
+      customType: "regex",
+      description: "Dagger engine",
+      managerFilePatterns: ["/^dagger\\.json$/", "/^\\.github/workflows/.+\\.ya?ml$/"],
+      matchStrings: [
+        "\"engineVersion\": \"v(?<currentValue>[0-9.]+)\"",
+        "version: (?<currentValue>[0-9.]+)\\n\\s+verb: call",
+      ],
+      depNameTemplate: "dagger/dagger",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>.+)$",
+    },
+  ],
+
+  packageRules: [
+    {
+      // An engine bump also needs `dagger develop` to regenerate .dagger/dagger.gen.go and
+      // the SDK module; Renovate cannot run that, so these PRs are a human's.
+      // The .dagger Go modules are the SDK's, so they ride the same PR.
+      matchPackageNames: ["dagger/dagger", "dagger.io/dagger", "dagger/dagger-for-github"],
+      groupName: "dagger engine",
+      labels: ["dependencies", "needs-dagger-develop"],
+    },
+    {
+      matchManagers: ["gomod"],
+      matchFileNames: [".dagger/go.mod"],
+      groupName: "dagger engine",
+      labels: ["dependencies", "needs-dagger-develop"],
+    },
+    {
+      // The uv locks are compiled for 3.13 (--python-version=3.13); a new Python minor changes
+      // both, by hand. Digest updates of 3.13 still flow.
+      matchDatasources: ["docker"],
+      matchPackageNames: ["python"],
+      allowedVersions: "/^3\\.13-slim-bookworm$/",
+    },
+    {
+      // Cluster-level components: one reviewed PR at a time, smoke-tested by hand.
+      // No digest pins here: helm --version and k3d's image flag take a bare version.
+      matchFileNames: ["versions.env"],
+      pinDigests: false,
+      labels: ["dependencies", "needs-smoke"],
+    },
+  ],
+}
