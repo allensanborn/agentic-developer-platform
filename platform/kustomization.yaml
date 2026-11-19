@@ -5,6 +5,7 @@ resources:
   - gateway/gateway.yaml
   - gateway/models.yaml
   - gateway/networkpolicy.yaml
+  - gateway/egress-fqdn.yaml
   - gateway/guardrails.yaml
   - models/ollama.yaml
   - models/scripted.yaml

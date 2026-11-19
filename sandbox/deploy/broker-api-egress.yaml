@@ -1,20 +1,17 @@
-# Lets the broker reach the Kubernetes API (to claim sandboxes) at the API server's actual
-# address and port, which a NetworkPolicy sees after the Service is translated. Applied by
-# scripts/sandbox-up.sh, which fills in __API_IP__ and __API_PORT__ from the `kubernetes`
-# endpoints. Not in kustomization.yaml for that reason.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+# Lets the broker reach the Kubernetes API (to claim sandboxes). A CiliumNetworkPolicy, because
+# Cilium (ADR 0014) gives the API server its own identity: after Service translation it is the
+# `host` or `remote-node` entity, which a NetworkPolicy ipBlock does not select. kube-apiserver
+# names it whichever node it is on.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: code-executor-api
   namespace: tools
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app: code-executor
-  policyTypes: [Egress]
   egress:
-    - to:
-        - ipBlock:
-            cidr: __API_IP__/32
-      ports:
-        - port: __API_PORT__
+    - toEntities: [kube-apiserver]
+      toPorts:
+        - ports: [{port: "6443", protocol: TCP}]

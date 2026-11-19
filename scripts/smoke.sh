@@ -17,7 +17,10 @@ probe() { # namespace: a long-lived curl pod to exec into
       "securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' >/dev/null
   kubectl wait -n "$1" pod/adp-smoke --for=condition=Ready --timeout=120s >/dev/null
 }
-cleanup() { for ns in agents default; do kubectl delete pod adp-smoke -n "$ns" --ignore-not-found >/dev/null 2>&1; done; }
+cleanup() {
+  for ns in agents default; do kubectl delete pod adp-smoke -n "$ns" --ignore-not-found >/dev/null 2>&1; done
+  kubectl delete pod adp-smoke-gw -n ai-gateway --ignore-not-found >/dev/null 2>&1
+}
 trap cleanup EXIT
 cleanup
 probe agents; probe default
@@ -77,6 +80,34 @@ check "a namespace without the client label cannot reach the gateway" 000 "$(sta
 check "agents cannot reach the local models directly" 000 "$(status agents http://ollama.models.svc.cluster.local:11434/api/tags)"
 check "agents cannot reach the host's model directly" 000 "$(status agents http://host.docker.internal:11434/api/version)"
 check "agents cannot reach the internet" 000 "$(status agents https://openrouter.ai)"
+
+echo "--- gateway egress (ADR 0014)"
+# A curl pod with the gateway's policy label (not the Service's other labels, so it takes no
+# traffic) stands in for the gateway: the pod holding the provider key reaches providers by
+# name and nothing else, and Cilium records what it drops.
+kubectl run adp-smoke-gw -n ai-gateway --image "$CURL" --restart=Never \
+  --labels gateway.networking.k8s.io/gateway-name=ai-gateway --overrides '{"spec":{
+    "automountServiceAccountToken":false,
+    "securityContext":{"runAsNonRoot":true,"runAsUser":10001,"seccompProfile":{"type":"RuntimeDefault"}},
+    "containers":[{"name":"c","image":"'"$CURL"'","command":["sleep","900"],
+      "securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' >/dev/null
+kubectl wait -n ai-gateway pod/adp-smoke-gw --for=condition=Ready --timeout=120s >/dev/null
+gw_status() { kubectl exec -n ai-gateway adp-smoke-gw -- curl -s -m 8 -o /dev/null -w '%{http_code}' "$1" 2>/dev/null | tail -c 3; }
+check "the gateway can reach its hosted provider by name" 200 "$(gw_status https://openrouter.ai/api/v1/models)"
+check "the gateway cannot reach other internet services" 000 "$(gw_status https://webhook.site)"
+check "the gateway cannot reach the internet by IP" 000 "$(gw_status https://1.1.1.1)"
+dropped() { # did any node's Cilium agent record a policy drop for the probe? Flows can lag.
+  for _ in 1 2 3 4 5; do
+    for p in $(kubectl get pod -n kube-system -l k8s-app=cilium -o name); do
+      kubectl exec -n kube-system "$p" -c cilium-agent -- hubble observe --pod ai-gateway/adp-smoke-gw \
+        --verdict DROPPED --since 5m -o compact 2>/dev/null | grep -q 'Policy denied' && { echo yes; return; }
+    done
+    sleep 2
+  done
+  echo no
+}
+check "Cilium recorded the blocked attempt" yes "$(dropped)"
+kubectl delete pod adp-smoke-gw -n ai-gateway --wait=false >/dev/null
 
 echo "--- credentials"
 check "the provider key exists only in the gateway namespace" 1 \
