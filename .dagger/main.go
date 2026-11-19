@@ -22,6 +22,7 @@ const (
 	trivyImage       = "aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb"
 	gitleaksImage    = "zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
 	pythonImage      = "python:3.13-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72"
+	prometheusImage  = "prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2"
 	renovateImage    = "renovate/renovate:44.216.2@sha256:435c302302f1db679e9b482f8dfd7e1e0c3b6938df44f9444780064c9a4d2c4f"
 )
 
@@ -228,7 +229,21 @@ func (m *Ci) Renovate(
 		Stdout(ctx)
 }
 
-// Check is the single CI entrypoint: lint, test, boundaries, harness lock, Renovate config, scan.
+// Alerts checks and unit-tests the alert rules in platform/telemetry/ (alerts_test.yml): each
+// detection fires on its case and stays quiet beside it, with no cluster (adp-0c0).
+func (m *Ci) Alerts(
+	ctx context.Context,
+	// +defaultPath="/platform/telemetry"
+	src *dagger.Directory,
+) (string, error) {
+	return dag.Container().From(prometheusImage).
+		WithDirectory("/rules", src).WithWorkdir("/rules").
+		WithExec([]string{"promtool", "check", "rules", "alerts.yml"}).
+		WithExec([]string{"promtool", "test", "rules", "alerts_test.yml"}).
+		Stdout(ctx)
+}
+
+// Check is the single CI entrypoint: lint, test, boundaries, harness lock, Renovate config, alert rules, scan.
 func (m *Ci) Check(
 	ctx context.Context,
 	// +defaultPath="/"
@@ -243,6 +258,7 @@ func (m *Ci) Check(
 	g.Go(func() error { _, err := m.Boundaries(ctx, src.WithoutDirectory(".git")); return err })
 	g.Go(func() error { _, err := m.Harness(ctx, src.WithoutDirectory(".git")); return err })
 	g.Go(func() error { _, err := m.RenovateConfig(ctx, src.File("renovate.json5")); return err })
+	g.Go(func() error { _, err := m.Alerts(ctx, src.Directory("platform/telemetry")); return err })
 	g.Go(func() error { return m.Scan(ctx, src) })
 	return g.Wait()
 }

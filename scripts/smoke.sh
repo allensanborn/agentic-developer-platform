@@ -96,17 +96,8 @@ gw_status() { kubectl exec -n ai-gateway adp-smoke-gw -- curl -s -m 8 -o /dev/nu
 check "the gateway can reach its hosted provider by name" 200 "$(gw_status https://openrouter.ai/api/v1/models)"
 check "the gateway cannot reach other internet services" 000 "$(gw_status https://webhook.site)"
 check "the gateway cannot reach the internet by IP" 000 "$(gw_status https://1.1.1.1)"
-dropped() { # did any node's Cilium agent record a policy drop for the probe? Flows can lag.
-  for _ in 1 2 3 4 5; do
-    for p in $(kubectl get pod -n kube-system -l k8s-app=cilium -o name); do
-      kubectl exec -n kube-system "$p" -c cilium-agent -- hubble observe --pod ai-gateway/adp-smoke-gw \
-        --verdict DROPPED --since 5m -o compact 2>/dev/null | grep -q 'Policy denied' && { echo yes; return; }
-    done
-    sleep 2
-  done
-  echo no
-}
-check "Cilium recorded the blocked attempt" yes "$(dropped)"
+# That Cilium recorded these drops is checked under "detections": EgressPolicyDrop counts them
+# from hubble_drop_total, which does not depend on Hubble's small per-node flow buffer.
 kubectl delete pod adp-smoke-gw -n ai-gateway --wait=false >/dev/null
 
 echo "--- credentials"
@@ -162,6 +153,46 @@ check "every gateway model call (at least the draft and the review) nests under 
 check "the gateway span records who called, the tokens and which endpoint answered" yes \
   "$(awk '$4 == "POST_/v1/chat/completions" && $5 == "system:serviceaccount:agents:research-agent" && $6 > 0 && $7 != "-" {f = 1} END {print f ? "yes" : "no"}' <<<"$tr")"
 check "agents cannot reach the trace query port" 000 "$(status agents http://jaeger.telemetry.svc.cluster.local:16686/)"
+kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
+
+echo "--- detections (platform/telemetry/alerts.yml)"
+# Read with a port-forward: nothing in the cluster may reach Prometheus.
+kubectl port-forward -n telemetry svc/prometheus 19090:9090 >/dev/null 2>&1 &
+pf=$!
+prom() { curl -s -m 5 "localhost:19090/api/v1/$1"; }
+promq() { curl -s -m 5 -G localhost:19090/api/v1/query --data-urlencode "query=$1"; } # -G: no curl {} globbing
+for _ in $(seq 1 30); do prom status/buildinfo >/dev/null && break; sleep 1; done
+nodes=$(kubectl get nodes --no-headers | wc -l | tr -d ' ')
+up=""
+for _ in $(seq 1 12); do # first scrape of a new target takes up to one interval
+  up=$(prom targets | jq -r '[.data.activeTargets[] | select(.health == "up") | .labels.job] | group_by(.) | map("\(.[0])=\(length)") | join(" ")' 2>/dev/null)
+  [ "$up" = "gateway=1 hubble=$nodes" ] && break
+  sleep 5
+done
+check "Prometheus scrapes the gateway and every Cilium agent" "gateway=1 hubble=$nodes" "$up"
+has_caller() { # the research runs above, as seen by Prometheus: polls, since a scrape can lag
+  for _ in $(seq 1 12); do
+    promq 'count(agentgateway_requests_total{caller="system:serviceaccount:agents:research-agent"})' |
+      jq -e '(.data.result | length) > 0' >/dev/null 2>&1 && { echo yes; return; }
+    sleep 5
+  done
+  echo no
+}
+check "gateway metrics carry the caller's identity" yes "$(has_caller)"
+for _ in $(seq 1 12); do chat "$intern" smart >/dev/null; done # an identity probing what it may use
+firing() { # alertname, jq condition on labels: yes once Prometheus reports it firing
+  for _ in $(seq 1 24); do
+    prom alerts | jq -e --arg a "$1" "[.data.alerts[] | select(.labels.alertname == \$a and .state == \"firing\" and ($2))] | length > 0" >/dev/null 2>&1 &&
+      { echo yes; return; }
+    sleep 5
+  done
+  echo no
+}
+check "a burst of refusals raises GatewayDenialBurst for that caller" yes \
+  "$(firing GatewayDenialBurst '.labels.caller == "system:serviceaccount:agents:intern" and .labels.status == "403"')"
+check "the gateway probe's blocked egress raises EgressPolicyDrop for that pod" yes \
+  "$(firing EgressPolicyDrop '.labels.source == "ai-gateway/adp-smoke-gw"')"
+check "agents cannot reach Prometheus" 000 "$(status agents http://prometheus.telemetry.svc.cluster.local:9090/)"
 kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
 
 echo

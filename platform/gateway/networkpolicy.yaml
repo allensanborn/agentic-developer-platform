@@ -18,6 +18,15 @@ spec:
               adp.dev/ai-gateway-client: "true"
       ports:
         - port: 8080
+    - from: # Prometheus scrapes the metrics port (platform/telemetry/prometheus.yaml)
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: telemetry
+          podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - port: 15020
   egress:
     - to:
         - namespaceSelector:

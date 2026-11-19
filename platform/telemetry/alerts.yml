@@ -1,0 +1,38 @@
+# Detections (adp-0c0): logs and traces say what happened; these say something is wrong now.
+# Shaped by GTIG/Mandiant's Layer 5 (Nov 2026): agentic intrusions arrive as valid identities
+# moving at machine speed (ARTEX: 27 events in 23 s), so watch velocity and denials per
+# identity, and treat a blocked egress attempt as a signal even when nothing got through.
+# `caller` is the gateway's jwt.sub (frontend.metrics in platform/telemetry/jaeger.yaml);
+# unauthenticated requests have none. Tested offline: alerts_test.yml (dagger call check).
+groups:
+  - name: gateway
+    rules:
+      - alert: GatewayTokenVelocity
+        # ponytail: a fixed ceiling, not a per-caller baseline; learn baselines once there is
+        # enough history to have one.
+        expr: sum by (caller) (rate(agentgateway_gen_ai_client_token_usage_sum[5m])) * 60 > 20000
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.caller }} is using {{ $value | humanize }} tokens/min"
+      - alert: GatewayDenialBurst
+        # A burst of refusals: a credential being tried, or an agent probing what it may do.
+        expr: sum by (caller, status) (increase(agentgateway_requests_total{status=~"401|403|429"}[1m])) >= 10
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $value | humanize }} x HTTP {{ $labels.status }} for caller '{{ $labels.caller }}' in 1m"
+      - alert: GatewayCallerDenied
+        # A known identity asked for something it is not allowed: a model, a tool. Rare in
+        # normal operation, so any occurrence is worth a look.
+        expr: sum by (caller) (increase(agentgateway_requests_total{status="403"}[5m])) > 0
+        labels: {severity: info}
+        annotations:
+          summary: "{{ $labels.caller }} was refused {{ $value | humanize }} time(s) in 5m"
+  - name: egress
+    rules:
+      - alert: EgressPolicyDrop
+        # Cilium dropped a connection a policy does not allow (Hubble). For the gateway or an
+        # agent, that is an attempt to reach somewhere it was never meant to.
+        expr: sum by (source) (increase(hubble_drop_total{reason="POLICY_DENIED"}[5m])) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.source }} tried {{ $value | humanize }} connection(s) a policy denies"

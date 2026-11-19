@@ -137,6 +137,13 @@ spec:
         port: 4317
       # Trace every call, including ones that arrive without a traceparent.
       randomSampling: "true"
+    # Every Prometheus metric carries the caller's identity, so platform/telemetry/alerts.yml
+    # can rate and count per caller (adp-0c0). Unauthenticated requests get no label.
+    metrics:
+      attributes:
+        add:
+          - name: caller
+            expression: jwt.sub
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

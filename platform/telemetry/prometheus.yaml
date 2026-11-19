@@ -1,0 +1,127 @@
+# Metrics and alert rules (adp-0c0): the gateway's per-caller request and token counters and
+# Cilium's drop counter, evaluated against platform/telemetry/alerts.yml. No Alertmanager:
+# firing alerts are read from the API (scripts/smoke.sh does). In-memory TSDB, two days.
+# ponytail: add Alertmanager and a receiver when someone should be woken by these.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: telemetry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=2d
+          ports:
+            - name: http
+              containerPort: 9090
+          readinessProbe:
+            httpGet: {path: /-/ready, port: 9090}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - {name: config, mountPath: /etc/prometheus/prometheus.yml, subPath: prometheus.yml}
+            - {name: rules, mountPath: /etc/prometheus/rules}
+            - {name: data, mountPath: /prometheus}
+      volumes:
+        - name: config
+          configMap: {name: prometheus-config}
+        - name: rules
+          configMap: {name: prometheus-rules}
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: telemetry
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - {name: http, port: 9090, targetPort: 9090}
+---
+# The gateway's metrics port, for DNS discovery. Headless: Prometheus scrapes each pod, not a
+# load-balanced pick. The gateway's own Service exposes only its listeners.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-gateway-metrics
+  namespace: ai-gateway
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/instance: ai-gateway
+    app.kubernetes.io/name: ai-gateway
+    gateway.networking.k8s.io/gateway-name: ai-gateway
+  ports:
+    - {name: metrics, port: 15020, targetPort: 15020}
+---
+# Nothing may reach Prometheus; it is read through a port-forward, like Jaeger's query port.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus
+  namespace: telemetry
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+  policyTypes: [Ingress]
+---
+# Prometheus may resolve names and scrape exactly its two targets. A CiliumNetworkPolicy,
+# because the Cilium agents run on the host network: they are the host/remote-node entities,
+# which a NetworkPolicy cannot select (ADR 0014).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: prometheus-scrape
+  namespace: telemetry
+spec:
+  endpointSelector:
+    matchLabels:
+      app: prometheus
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports: [{port: "53", protocol: ANY}]
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: ai-gateway
+            gateway.networking.k8s.io/gateway-name: ai-gateway
+      toPorts:
+        - ports: [{port: "15020", protocol: TCP}]
+    - toEntities: [host, remote-node]
+      toPorts:
+        - ports: [{port: "9965", protocol: TCP}]

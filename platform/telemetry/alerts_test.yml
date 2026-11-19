@@ -1,0 +1,52 @@
+# promtool test rules (dagger call check). Each alert fires on its case and stays quiet beside it.
+rule_files: [alerts.yml]
+evaluation_interval: 15s
+tests:
+  - interval: 15s
+    input_series:
+      # 2000 output tokens every 15 s = 8000/min: under the ceiling.
+      - series: 'agentgateway_gen_ai_client_token_usage_sum{caller="system:serviceaccount:agents:research-agent"}'
+        values: '0+2000x40'
+      # 6000 every 15 s = 24000/min: over it.
+      - series: 'agentgateway_gen_ai_client_token_usage_sum{caller="system:serviceaccount:agents:looping"}'
+        values: '0+6000x40'
+      # 12 refusals inside a minute for intern; 1 for research-agent.
+      - series: 'agentgateway_requests_total{caller="system:serviceaccount:agents:intern",status="403"}'
+        values: '0x20 3 6 9 12 12x16'
+      - series: 'agentgateway_requests_total{caller="system:serviceaccount:agents:research-agent",status="403"}'
+        values: '0x20 1x20'
+      - series: 'agentgateway_requests_total{caller="system:serviceaccount:agents:research-agent",status="200"}'
+        values: '0+50x40'
+      - series: 'hubble_drop_total{reason="POLICY_DENIED",source="ai-gateway/ai-gateway-7c9"}'
+        values: '0x20 2x20'
+      - series: 'hubble_drop_total{reason="UNSUPPORTED_L3_PROTOCOL",source="kube-system/coredns"}'
+        values: '0+5x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: GatewayTokenVelocity
+        exp_alerts:
+          - exp_labels: {severity: warning, caller: "system:serviceaccount:agents:looping"}
+            exp_annotations: {summary: "system:serviceaccount:agents:looping is using 24k tokens/min"}
+      - eval_time: 6m
+        alertname: GatewayDenialBurst
+        exp_alerts:
+          - exp_labels: {severity: warning, caller: "system:serviceaccount:agents:intern", status: "403"}
+            exp_annotations: {summary: "12 x HTTP 403 for caller 'system:serviceaccount:agents:intern' in 1m"}
+      - eval_time: 9m
+        alertname: GatewayDenialBurst
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: GatewayCallerDenied
+        exp_alerts:
+          - exp_labels: {severity: info, caller: "system:serviceaccount:agents:intern"}
+            exp_annotations: {summary: "system:serviceaccount:agents:intern was refused 12 time(s) in 5m"}
+          - exp_labels: {severity: info, caller: "system:serviceaccount:agents:research-agent"}
+            exp_annotations: {summary: "system:serviceaccount:agents:research-agent was refused 1 time(s) in 5m"}
+      - eval_time: 6m
+        alertname: EgressPolicyDrop
+        exp_alerts:
+          - exp_labels: {severity: warning, source: "ai-gateway/ai-gateway-7c9"}
+            exp_annotations: {summary: "ai-gateway/ai-gateway-7c9 tried 2 connection(s) a policy denies"}
+      - eval_time: 2m
+        alertname: EgressPolicyDrop
+        exp_alerts: []
