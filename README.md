@@ -75,10 +75,13 @@ The order tools from AWS's *Secure AI Agents on Amazon EKS* workshop (labs 3 and
 
 ```sh
 scripts/tools-up.sh     # after up.sh: image, orders table, server, route, policy
-scripts/tools-smoke.sh  # 13 checks: identity, visibility, calls, isolation
+scripts/tools-smoke.sh  # 18 checks: identity, visibility, calls, the agent's tool workflow, isolation
+kubectl exec -n agents deploy/research-agent -c agent -- python app.py order ORD-1001
 ```
 
-Not built yet: an agent that calls these tools as a workflow activity, and the prompt-injection controls tool output needs (adp-2id).
+The sample agent's `order_status` workflow calls `lookup_order` as a workflow activity, like a model call: recorded, so a resumed run does not repeat it. Its MCP client is about forty lines of standard library (`agent/app.py`), and the gateway, not the agent, decides which tools it has.
+
+Not built yet: the prompt-injection controls tool output needs (adp-2id).
 
 ## ERP discrepancy agent (branch `erp-discrepancy-agent`)
 
