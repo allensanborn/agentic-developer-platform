@@ -67,15 +67,57 @@ spec:
 scopes:
   - erp-agent
 ---
+# One Configuration per app, so each sidecar serves only the Dapr APIs its app uses (adp-vba).
+# Anything else (metadata, state, invoke, secrets, publish) is refused at the sidecar, so a
+# compromised app cannot reach around its own scoping. Cross-app rules stay in accessControl
+# and the WorkflowAccessPolicies below. Workflow runs on durabletask's gRPC service, which the
+# allow-list does not filter. Each list needs one gRPC rule daprd recognises, or it silently
+# allows everything; the controller, which uses no runtime API, gets shutdown.v1 (stop its own
+# sidecar). platform/dapr/agents.yaml has the longer note; erp-smoke.sh proves each list live.
+# The controller schedules runs and raises decision events: workflows only.
 apiVersion: dapr.io/v1alpha1
 kind: Configuration
 metadata:
-  name: erp
+  name: erp-controller
   namespace: erp
 spec:
   accessControl:
     defaultAction: deny
     trustDomain: public
+  api:
+    allowed:
+      - {name: shutdown, version: v1, protocol: grpc}
+      - {name: healthz, version: v1.0, protocol: http}
+---
+# The agent hosts the diagnose activity and reads through erp-read.
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: erp-agent
+  namespace: erp
+spec:
+  accessControl:
+    defaultAction: deny
+    trustDomain: public
+  api:
+    allowed:
+      - {name: bindings, version: v1, protocol: grpc}
+      - {name: healthz, version: v1.0, protocol: http}
+---
+# The executor hosts dry_run and commit and writes through erp-write.
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: erp-executor
+  namespace: erp
+spec:
+  accessControl:
+    defaultAction: deny
+    trustDomain: public
+  api:
+    allowed:
+      - {name: bindings, version: v1, protocol: grpc}
+      - {name: healthz, version: v1.0, protocol: http}
 ---
 # Workflow access is open until a policy exists, so each app gets one. The caller is
 # identified by its Sentry-issued mTLS identity, not by anything it says about itself.
