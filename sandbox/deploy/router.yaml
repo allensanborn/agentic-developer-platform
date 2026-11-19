@@ -1,0 +1,89 @@
+# The agent-sandbox router: the only path from the broker into a sandbox. Upstream's
+# sandbox_router.yaml (the repo's k8s/ example, not a release asset), changed only to fit
+# here: one replica, the image pinned by digest (upstream publishes only a moving
+# `latest-main` tag), and a securityContext for Pod Security `restricted`.
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox-router-svc
+  namespace: agent-sandbox-system
+spec:
+  type: ClusterIP
+  selector:
+    app: sandbox-router
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox-router-deployment
+  namespace: agent-sandbox-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sandbox-router
+  template:
+    metadata:
+      labels:
+        app: sandbox-router
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: router
+          image: us-central1-docker.pkg.dev/k8s-staging-images/agent-sandbox/sandbox-router:latest-main@sha256:0bbb6b11ad09f144ba97f0cdbb2e0ea71ee543f253aa3aab8e6c7209a5d9ae31
+          env:
+            - name: PROXY_TIMEOUT_SECONDS
+              value: "180"
+            - name: ALLOW_UNAUTHENTICATED_ROUTER # reachable only from the broker (policy below)
+              value: "true"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+---
+# In: only the broker.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sandbox-router-ingress
+  namespace: agent-sandbox-system
+spec:
+  podSelector:
+    matchLabels:
+      app: sandbox-router
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tools
+          podSelector:
+            matchLabels:
+              app: code-executor
+      ports:
+        - port: 8080

@@ -1,0 +1,12 @@
+# What model-written code may import, plus the server. Upstream's lock (Python 3.11) carried
+# 36 HIGH/CRITICAL findings; this recompiles the same set.
+fastapi
+uvicorn
+python-multipart
+pandas
+numpy
+scipy
+scikit-learn
+lightgbm
+matplotlib
+tabulate

@@ -69,6 +69,10 @@ entries:
       path: tools/deploy/gateway-mcp.yaml
       line: 60
       sha256: 8adc07199649443d19ff324ed876ccac2fe156a54d5f2f27a1ca125c255707c0
+    - kind: file
+      path: sandbox/deploy/broker.yaml
+      line: 179
+      sha256: 06fb031d0ade71377d9693f9a70bdc6c130082785b07a90cc9b4e762df7f007d
 - id: principal-erp-agent
   kind: principal
   relation: equal
@@ -172,6 +176,10 @@ entries:
       path: tools/deploy/gateway-mcp.yaml
       line: 60
       sha256: 8adc07199649443d19ff324ed876ccac2fe156a54d5f2f27a1ca125c255707c0
+    - kind: file
+      path: sandbox/deploy/broker.yaml
+      line: 179
+      sha256: 06fb031d0ade71377d9693f9a70bdc6c130082785b07a90cc9b4e762df7f007d
 - id: principal-namespace-erp
   kind: principal
   relation: equal
@@ -409,6 +417,14 @@ entries:
       path: tools/deploy/gateway-mcp.yaml
       line: 26
       sha256: 8adc07199649443d19ff324ed876ccac2fe156a54d5f2f27a1ca125c255707c0
+  - party: sandbox-route
+    role: consumes
+    value: mcp
+    records:
+    - kind: file
+      path: sandbox/deploy/broker.yaml
+      line: 151
+      sha256: 06fb031d0ade71377d9693f9a70bdc6c130082785b07a90cc9b4e762df7f007d
 - id: gateway-mcp-port
   kind: endpoint
   relation: equal
@@ -442,6 +458,14 @@ entries:
       path: scripts/tools-smoke.sh
       line: 9
       sha256: ad8696bf83c97216ca39de9ad3c7550e85f9efa149f98d713e2afdc720a782bd
+  - party: sandbox-smoke
+    role: consumes
+    value: '8081'
+    records:
+    - kind: file
+      path: scripts/sandbox-smoke.sh
+      line: 9
+      sha256: 85cb6da37f659a88783f98e7e66e11509e31fd2f20673be917e83f6f49cf9e9a
 - id: orders-table
   kind: table
   relation: equal
@@ -471,3 +495,153 @@ entries:
       path: tools/orders-mcp/seed.json
       line: 2
       sha256: fb5646c0d6abe7129aca926ef3c98c637338aaa63d323e3ccc28eb8000e7d37c
+  - party: code-executor
+    role: consumes
+    value: adp-orders
+    records:
+    - kind: file
+      path: sandbox/deploy/broker.yaml
+      line: 67
+      sha256: 06fb031d0ade71377d9693f9a70bdc6c130082785b07a90cc9b4e762df7f007d
+- id: sandbox-warmpool
+  kind: name
+  relation: equal
+  description: The warm pool sandboxes are claimed from. A mismatch and run_python fails at claim time.
+  sides:
+  - party: sandbox
+    role: defines
+    value: gvisor-python-pool
+    records:
+    - kind: file
+      path: sandbox/deploy/sandbox.yaml
+      line: 85
+      sha256: 86d4b5a34d3e517a694facfd79b086c3906a01c740be4113bf0cc439ff088f12
+  - party: code-executor
+    role: consumes
+    value: gvisor-python-pool
+    records:
+    - kind: file
+      path: sandbox/deploy/broker.yaml
+      line: 74
+      sha256: 06fb031d0ade71377d9693f9a70bdc6c130082785b07a90cc9b4e762df7f007d
+  - party: sandbox-smoke
+    role: consumes
+    value: gvisor-python-pool
+    records:
+    - kind: file
+      path: scripts/sandbox-smoke.sh
+      line: 41
+      sha256: 85cb6da37f659a88783f98e7e66e11509e31fd2f20673be917e83f6f49cf9e9a
+- id: sandbox-template
+  kind: name
+  relation: equal
+  description: The SandboxTemplate the warm pool stamps pods from.
+  sides:
+  - party: sandbox
+    role: defines
+    value: gvisor-python
+    records:
+    - kind: file
+      path: sandbox/deploy/sandbox.yaml
+      line: 24
+      sha256: 86d4b5a34d3e517a694facfd79b086c3906a01c740be4113bf0cc439ff088f12
+  - party: warm-pool
+    role: consumes
+    value: gvisor-python
+    records:
+    - kind: file
+      path: sandbox/deploy/sandbox.yaml
+      line: 90
+      sha256: 86d4b5a34d3e517a694facfd79b086c3906a01c740be4113bf0cc439ff088f12
+- id: runtime-class-gvisor
+  kind: name
+  relation: equal
+  description: The RuntimeClass that puts a pod under gVisor. A mismatch is a pod that never schedules.
+  sides:
+  - party: runtime
+    role: defines
+    value: gvisor
+    records:
+    - kind: file
+      path: sandbox/deploy/sandbox.yaml
+      line: 15
+      sha256: 86d4b5a34d3e517a694facfd79b086c3906a01c740be4113bf0cc439ff088f12
+  - party: sandbox-template
+    role: consumes
+    value: gvisor
+    records:
+    - kind: file
+      path: sandbox/deploy/sandbox.yaml
+      line: 47
+      sha256: 86d4b5a34d3e517a694facfd79b086c3906a01c740be4113bf0cc439ff088f12
+  - party: sandbox-smoke
+    role: consumes
+    value: gvisor
+    records:
+    - kind: file
+      path: scripts/sandbox-smoke.sh
+      line: 61
+      sha256: 85cb6da37f659a88783f98e7e66e11509e31fd2f20673be917e83f6f49cf9e9a
+- id: gvisor-node-label
+  kind: label
+  relation: equal
+  description: Marks the node runsc is installed on; the RuntimeClass schedules gVisor pods only there.
+  sides:
+  - party: bootstrap
+    role: defines
+    value: adp.dev/gvisor
+    records:
+    - kind: file
+      path: scripts/sandbox-up.sh
+      line: 54
+      sha256: da437efb849a32a502a4b0164a559470119ec22cf0d12959330470aa9361ea6b
+  - party: runtime
+    role: consumes
+    value: adp.dev/gvisor
+    records:
+    - kind: file
+      path: sandbox/deploy/sandbox.yaml
+      line: 19
+      sha256: 86d4b5a34d3e517a694facfd79b086c3906a01c740be4113bf0cc439ff088f12
+- id: sandbox-airgap-label
+  kind: label
+  relation: equal
+  description: The label the air-gap NetworkPolicy selects. It must be one a pod keeps when claimed, or the air gap fails open (defect 001).
+  sides:
+  - party: sandbox-template
+    role: defines
+    value: sandbox-kind
+    records:
+    - kind: file
+      path: sandbox/deploy/sandbox.yaml
+      line: 45
+      sha256: 86d4b5a34d3e517a694facfd79b086c3906a01c740be4113bf0cc439ff088f12
+  - party: network-policy
+    role: consumes
+    value: sandbox-kind
+    records:
+    - kind: file
+      path: sandbox/deploy/sandbox.yaml
+      line: 103
+      sha256: 86d4b5a34d3e517a694facfd79b086c3906a01c740be4113bf0cc439ff088f12
+- id: code-mcp-path
+  kind: endpoint
+  relation: equal
+  description: The gateway path for the code-execution broker.
+  sides:
+  - party: gateway
+    role: defines
+    value: /code-mcp
+    records:
+    - kind: file
+      path: sandbox/deploy/broker.yaml
+      line: 156
+      sha256: 06fb031d0ade71377d9693f9a70bdc6c130082785b07a90cc9b4e762df7f007d
+  - party: sandbox-smoke
+    role: consumes
+    value: /code-mcp
+    records:
+    - kind: file
+      path: scripts/sandbox-smoke.sh
+      line: 9
+      sha256: 85cb6da37f659a88783f98e7e66e11509e31fd2f20673be917e83f6f49cf9e9a

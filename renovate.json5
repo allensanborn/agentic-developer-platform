@@ -22,7 +22,7 @@
   // Hash-locked requirements: regenerate the lock (and its hashes) from requirements.in.
   "pip-compile": { managerFilePatterns: ["/(^|/)requirements\\.txt$/"] },
   pip_requirements: { enabled: false },
-  kubernetes: { managerFilePatterns: ["/^(platform|erp|tools)/.+\\.yaml$/"] },
+  kubernetes: { managerFilePatterns: ["/^(platform|erp|tools|sandbox)/.+\\.yaml$/"] },
   gomod: { postUpdateOptions: ["gomodTidy"] },
 
   customManagers: [
