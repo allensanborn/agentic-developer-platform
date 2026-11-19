@@ -96,11 +96,17 @@ gw_status() { kubectl exec -n ai-gateway adp-smoke-gw -- curl -s -m 8 -o /dev/nu
 check "the gateway can reach its hosted provider by name" 200 "$(gw_status https://openrouter.ai/api/v1/models)"
 check "the gateway cannot reach other internet services" 000 "$(gw_status https://webhook.site)"
 check "the gateway cannot reach the internet by IP" 000 "$(gw_status https://1.1.1.1)"
-gw_node=$(kubectl get pod -n ai-gateway adp-smoke-gw -o jsonpath='{.spec.nodeName}')
-cilium_pod=$(kubectl get pod -n kube-system -l k8s-app=cilium --field-selector "spec.nodeName=$gw_node" -o name | head -n1)
-check "Cilium recorded the blocked attempt" yes \
-  "$(kubectl exec -n kube-system "$cilium_pod" -c cilium-agent -- hubble observe --pod ai-gateway/adp-smoke-gw \
-    --verdict DROPPED --since 5m -o compact 2>/dev/null | grep -q 'Policy denied' && echo yes || echo no)"
+dropped() { # did any node's Cilium agent record a policy drop for the probe? Flows can lag.
+  for _ in 1 2 3 4 5; do
+    for p in $(kubectl get pod -n kube-system -l k8s-app=cilium -o name); do
+      kubectl exec -n kube-system "$p" -c cilium-agent -- hubble observe --pod ai-gateway/adp-smoke-gw \
+        --verdict DROPPED --since 5m -o compact 2>/dev/null | grep -q 'Policy denied' && { echo yes; return; }
+    done
+    sleep 2
+  done
+  echo no
+}
+check "Cilium recorded the blocked attempt" yes "$(dropped)"
 kubectl delete pod adp-smoke-gw -n ai-gateway --wait=false >/dev/null
 
 echo "--- credentials"
