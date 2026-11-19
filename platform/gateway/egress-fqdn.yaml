@@ -1,0 +1,27 @@
+# The gateway is the one pod holding a provider key. It may reach hosted providers by name
+# and nothing else on the internet (ADR 0014). Standard NetworkPolicy matches IPs only, so
+# this is a CiliumNetworkPolicy; it adds to networkpolicy.yaml (policies are a union).
+# The DNS rule routes the gateway's lookups through Cilium's DNS proxy, which is how
+# toFQDNs learns which IPs "openrouter.ai" currently means.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ai-gateway-provider-egress
+  namespace: ai-gateway
+spec:
+  endpointSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: ai-gateway
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports: [{port: "53", protocol: ANY}]
+          rules:
+            dns: [{matchPattern: "*"}]
+    - toFQDNs:
+        - matchName: openrouter.ai
+      toPorts:
+        - ports: [{port: "443", protocol: TCP}]

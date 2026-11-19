@@ -30,6 +30,8 @@ reach() { kubectl exec -n "$NS" "$1" -- python3 -c "$PROBE" "$2" "$3" 2>/dev/nul
 
 echo "--- the warm pool"
 # Readiness, not apply success: Pod Security refuses a non-compliant pod silently.
+# sandbox-up.sh replaces pool pods as it goes; give them a moment rather than racing them.
+kubectl wait -n "$NS" pod -l agents.x-k8s.io/warm-pool-sandbox --for=condition=Ready --timeout=180s >/dev/null 2>&1 || true
 check "both warm-pool sandboxes are Ready" 2 \
   "$(kubectl get pods -n $NS -l agents.x-k8s.io/warm-pool-sandbox -o json | jq '[.items[] | select(any(.status.conditions[]?; .type == "Ready" and .status == "True"))] | length')"
 
