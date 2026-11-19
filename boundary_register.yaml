@@ -31,7 +31,7 @@ entries:
     - kind: file
       path: erp/deploy/workloads.yaml
       line: 120
-      sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c
+      sha256: 6b858638b2878fc3c23e0b095f621bf48287e7cd96611ede4825f6f281dcb03e
 - id: principal-research-agent
   kind: principal
   relation: equal
@@ -85,7 +85,7 @@ entries:
     - kind: file
       path: erp/deploy/workloads.yaml
       line: 60
-      sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c
+      sha256: 6b858638b2878fc3c23e0b095f621bf48287e7cd96611ede4825f6f281dcb03e
   - party: gateway
     role: consumes
     value: erp-agent
@@ -192,7 +192,7 @@ entries:
     - kind: file
       path: erp/deploy/workloads.yaml
       line: 61
-      sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c
+      sha256: 6b858638b2878fc3c23e0b095f621bf48287e7cd96611ede4825f6f281dcb03e
   - party: gateway
     role: consumes
     value: erp
@@ -291,7 +291,7 @@ entries:
     - kind: file
       path: scripts/erp-smoke.sh
       line: 15
-      sha256: b7177830d2bd97690b5394acba6b4823f39654e12b162afedab8a24ce48f0d3b
+      sha256: 70eaa2d84761e080fa628afaee7edf62b994fc18c024731c67f46c90e5cef3e2
 - id: provider-key-secret
   kind: secret
   relation: equal
@@ -395,7 +395,7 @@ entries:
     - kind: file
       path: erp/deploy/workloads.yaml
       line: 1
-      sha256: 62b3e692d95f238577d93ab96283219ef03c270a2679c15213d0a4e86dd9e93c
+      sha256: 6b858638b2878fc3c23e0b095f621bf48287e7cd96611ede4825f6f281dcb03e
 - id: gateway-mcp-listener
   kind: name
   relation: equal

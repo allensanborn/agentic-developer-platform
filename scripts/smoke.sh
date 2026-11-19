@@ -110,6 +110,17 @@ echo "--- durable agent (Dapr Workflow, state in DynamoDB)"
 out=$(kubectl exec -n agents deploy/research-agent -c agent -- python app.py ask "What is the capital of France?" 2>/dev/null | tail -n1)
 check "the research workflow completes" COMPLETED "$(jq -r .status <<<"$out" 2>/dev/null)"
 check "draft used the fast alias, review the smart alias" "fast smart" "$(jq -r '[.result.steps[].alias] | join(" ")' <<<"$out" 2>/dev/null)"
+# Raw gRPC to a pod's own sidecar: OK, or the status code (UNIMPLEMENTED = refused by the
+# Configuration's API allow-list, adp-vba). Raw, so no SDK fallback can hide a refusal.
+SIDECAR_RPC='import grpc,os,sys
+from dapr.proto import api_v1 as m, api_service_v1 as s
+d=s.DaprStub(grpc.insecure_channel("127.0.0.1:"+os.environ.get("DAPR_GRPC_PORT","50001")))
+calls={"GetState":lambda: d.GetState(m.GetStateRequest(store_name="statestore",key="x")),
+ "InvokeBinding":lambda: d.InvokeBinding(m.InvokeBindingRequest(name=sys.argv[2],operation="query",metadata={"sql":"select 1","params":"[]"}))}
+try: calls[sys.argv[1]](); print("OK")
+except grpc.RpcError as e: print(e.code().name)'
+check "the agent's sidecar refuses APIs the agent does not use (state)" UNIMPLEMENTED \
+  "$(kubectl exec -n agents deploy/research-agent -c agent -- python -c "$SIDECAR_RPC" GetState 2>/dev/null | tail -n1)"
 echo "      $(jq -c .result.steps <<<"$out" 2>/dev/null)"
 
 echo "--- traces (platform/telemetry/)"

@@ -100,5 +100,20 @@ kubectl rollout undo -n erp deploy/erp-agent >/dev/null
 kubectl rollout status -n erp deploy/erp-agent --timeout=3m >/dev/null
 sql "UPDATE invoice SET total = total - 5 WHERE invoice_id = 9" >/dev/null # leave the data clean
 
+# Raw gRPC to a pod's own sidecar: OK, or the status code (UNIMPLEMENTED = refused by the
+# Configuration's API allow-list, adp-vba). Raw, so no SDK fallback can hide a refusal.
+SIDECAR_RPC='import grpc,os,sys
+from dapr.proto import api_v1 as m, api_service_v1 as s
+d=s.DaprStub(grpc.insecure_channel("127.0.0.1:"+os.environ.get("DAPR_GRPC_PORT","50001")))
+calls={"GetState":lambda: d.GetState(m.GetStateRequest(store_name="statestore",key="x")),
+ "InvokeBinding":lambda: d.InvokeBinding(m.InvokeBindingRequest(name=sys.argv[2],operation="query",metadata={"sql":"select 1","params":"[]"}))}
+try: calls[sys.argv[1]](); print("OK")
+except grpc.RpcError as e: print(e.code().name)'
+sidecar() { kubectl exec -n erp "deploy/$1" -c app -- python -c "$SIDECAR_RPC" "$2" "${3:-none}" 2>/dev/null | tail -n1; }
+echo "== sidecar API allow-lists"
+check "the agent's sidecar answers its read binding" OK "$(sidecar erp-agent InvokeBinding erp-read)"
+check "the agent's sidecar refuses the state API" UNIMPLEMENTED "$(sidecar erp-agent GetState)"
+check "the controller's sidecar refuses bindings" UNIMPLEMENTED "$(sidecar erp-controller InvokeBinding erp-write)"
+
 echo
 if [ "$fails" -eq 0 ]; then echo "all checks passed"; else echo "$fails check(s) failed"; exit 1; fi
