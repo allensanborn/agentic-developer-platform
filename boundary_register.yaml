@@ -22,8 +22,8 @@ entries:
     records:
     - kind: file
       path: platform/agents/research-agent.yaml
-      line: 56
-      sha256: ac4dd929905ff96b85494ca70dc6ae2438d3ad3039efe90692fb3965202d5ffe
+      line: 59
+      sha256: 35fed739d8c10bdf0696de36c126b38af11f7eb66549134cf1bfbac73d477f8e
   - party: erp-agent
     role: presents
     value: ai-gateway
@@ -236,8 +236,8 @@ entries:
     records:
     - kind: file
       path: agent/app.py
-      line: 56
-      sha256: b6d5f44bf806aba6a6f0faff3837b4829cd21d0076da09d3341386549eeeb3cc
+      line: 170
+      sha256: 6ac45784523920de5f0e05c1f79fdd7d47bc352338a67ee0d1bedb7ff6d7664d
 - id: alias-smart
   kind: name
   relation: equal
@@ -257,8 +257,12 @@ entries:
     records:
     - kind: file
       path: agent/app.py
-      line: 61
-      sha256: b6d5f44bf806aba6a6f0faff3837b4829cd21d0076da09d3341386549eeeb3cc
+      line: 175
+      sha256: 6ac45784523920de5f0e05c1f79fdd7d47bc352338a67ee0d1bedb7ff6d7664d
+    - kind: file
+      path: agent/app.py
+      line: 156
+      sha256: 6ac45784523920de5f0e05c1f79fdd7d47bc352338a67ee0d1bedb7ff6d7664d
   - party: erp-agent
     role: consumes
     value: smart
@@ -383,7 +387,7 @@ entries:
     - kind: file
       path: platform/agents/research-agent.yaml
       line: 1
-      sha256: ac4dd929905ff96b85494ca70dc6ae2438d3ad3039efe90692fb3965202d5ffe
+      sha256: 35fed739d8c10bdf0696de36c126b38af11f7eb66549134cf1bfbac73d477f8e
   - party: erp-agent
     role: denies
     value: openrouter-apikey
@@ -453,7 +457,7 @@ entries:
     - kind: file
       path: scripts/tools-smoke.sh
       line: 9
-      sha256: f4ea6071c222348f1e4840770829d1fe96c3d0b48e147d05715ee35a2bb17550
+      sha256: ad8696bf83c97216ca39de9ad3c7550e85f9efa149f98d713e2afdc720a782bd
   - party: sandbox-smoke
     role: consumes
     value: '8081'
@@ -490,7 +494,7 @@ entries:
     - kind: file
       path: tools/orders-mcp/seed.json
       line: 2
-      sha256: 64795d0f0c31aebb691df74dde81570e6440c0fa42be1f047a2c6f41395e0d9e
+      sha256: fb5646c0d6abe7129aca926ef3c98c637338aaa63d323e3ccc28eb8000e7d37c
   - party: code-executor
     role: consumes
     value: adp-orders

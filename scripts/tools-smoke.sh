@@ -82,6 +82,27 @@ check "intern calling a tool it cannot see: unknown to the gateway" "unknown res
 check "nobody can call check_inventory" "unknown resource" \
   "$(call "$research" check_inventory '{"product_name":"Laptop"}' | jq -r .error)"
 
+echo "--- the agent calls a tool as a workflow activity (agent/app.py order_status)"
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+out=$(kubectl exec -n agents deploy/research-agent -c agent -- python app.py order ORD-1001 2>/dev/null | tail -n1)
+check "the order workflow completes" COMPLETED "$(jq -r .status <<<"$out" 2>/dev/null)"
+check "it got the order from the tool" "lookup_order Jane Doe" \
+  "$(jq -r '"\(.result.order.tool) \(.result.order.result.customer)"' <<<"$out" 2>/dev/null)"
+check "the gateway logged that tool call as research-agent" 1 \
+  "$(kubectl logs -n ai-gateway deploy/ai-gateway --since-time="$since" 2>/dev/null | grep 'listener=mcp' |
+    grep 'http.status=200' | grep 'jwt.sub=system:serviceaccount:agents:research-agent' |
+    grep 'mcp.method.name=tools/call' | grep -c 'gen_ai.tool.name=lookup_order')"
+check "and a model wrote the reply" true "$(jq -r '(.result.reply // "") | length > 0' <<<"$out" 2>/dev/null)"
+out=$(kubectl exec -n agents deploy/research-agent -c agent -- python app.py order ORD-9999 2>/dev/null | tail -n1)
+check "an unknown order ends the run without asking a model" "null null" \
+  "$(jq -r '"\(.result.reply) \(.result.model)"' <<<"$out" 2>/dev/null)"
+
+out=$(kubectl exec -n agents deploy/research-agent -c agent -- python app.py order ORD-6666 2>/dev/null | tail -n1)
+check "a record carrying an injection reaches the agent as tool output" true \
+  "$(jq -r '.result.order.result.customer | test("(?i)ignore all previous instructions")' <<<"$out" 2>/dev/null)"
+check "the gateway's prompt guard refuses the model call; no reply is written" "true null" \
+  "$(jq -r '"\((.result.refused // "") | test("prompt guard")) \(.result.reply)"' <<<"$out" 2>/dev/null)"
+
 echo "--- network isolation"
 check "agents cannot reach the tools server directly" 000 "$(status agents http://orders-mcp.tools.svc.cluster.local:8080/mcp)"
 check "a namespace without the client label cannot reach the tools listener" 000 "$(status default $MCP "$intern")"

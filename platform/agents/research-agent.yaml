@@ -31,6 +31,9 @@ spec:
           # Built and imported by scripts/up.sh; CI builds the same Dockerfile with Dagger.
           image: adp/research-agent:dev
           imagePullPolicy: Never
+          env: # traces to platform/telemetry/; the agent holds no tracing credential
+            - {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://jaeger.telemetry.svc.cluster.local:4318"}
+            - {name: OTEL_SERVICE_NAME, value: research-agent}
           resources:
             requests:
               cpu: 50m

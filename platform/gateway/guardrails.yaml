@@ -1,0 +1,32 @@
+# Prompt guard on every model call (adp-cm2): a request whose messages or tool output carry a
+# known prompt-injection phrase is rejected at the gateway before any model sees it.
+#
+# A tripwire, not the defense. Regexes catch the phrasing they list and nothing else; the
+# defense is structural (agent/app.py order_status): text from tools reaches a model step that
+# has no tools and is told it is data, so the worst a successful injection can do is word the
+# reply badly. This makes the common attempts visible and cheap to refuse, and logs them.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: prompt-guard
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  backend:
+    ai:
+      promptGuard:
+        request:
+          - scope: [Messages, ToolOutput]
+            regex:
+              action: Reject
+              matches:
+                - '(?i)\b(ignore|disregard|forget)\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier)\s+(instructions|directions|rules)'
+                - '(?i)\byou\s+are\s+now\s+(a|an|in)\b'
+                - '(?i)\b(reveal|print|show)\s+(your|the)\s+system\s+prompt'
+            response:
+              message: "rejected by the gateway's prompt guard: the request contains a prompt-injection phrase"
+              statusCode: 403

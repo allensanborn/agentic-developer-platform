@@ -5,6 +5,7 @@ resources:
   - gateway/gateway.yaml
   - gateway/models.yaml
   - gateway/networkpolicy.yaml
+  - gateway/guardrails.yaml
   - models/ollama.yaml
   - models/scripted.yaml
   - agents/base.yaml
@@ -13,3 +14,4 @@ resources:
   - secrets/provider-keys.yaml
   - dapr/agents.yaml
   - autoscaling/vpa.yaml
+  - telemetry/jaeger.yaml

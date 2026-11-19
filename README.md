@@ -40,6 +40,7 @@ flowchart LR
 | Key rotation without redeploys | `scripts/provider-key.sh` writes Secrets Manager; External Secrets refreshes every minute | Checked by hand: new value reached the gateway in about 45 s |
 | Agent work survives crashes | Dapr Workflow; model calls are recorded activities; state in DynamoDB behind Dapr's state API | `smoke.sh`: workflow completes |
 | Hardened workloads | Pod Security `restricted` on every namespace we own; non-root, read-only root filesystem, no capabilities, no API token | Enforced by admission |
+| One trace per agent run | The agent opens a span per workflow run and per activity and sends `traceparent`; the gateway exports a span per model and tool call with the caller's `jwt.sub`, tokens, model and the endpoint that answered (Jaeger v2, `platform/telemetry/`) | `smoke.sh`: one run is one trace across both; every gateway call nests under an agent span |
 | Supply chain | Every image, chart, action and Python package pinned by version and digest or hash | `dagger call check` |
 
 ## Run it
@@ -48,7 +49,7 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 
 ```sh
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
-scripts/smoke.sh                    # 16 end-to-end security checks (one skips without a host model)
+scripts/smoke.sh                    # 21 end-to-end security checks (one skips without a host model)
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
 dagger call check                   # lint, unit tests, boundary register, harness lock, Renovate config, secret/misconfig/vulnerability scans
 dagger call renovate --token=cmd://"gh auth token"   # what Renovate would bump (no PRs; ADR 0012)
@@ -56,6 +57,8 @@ k3d cluster delete adp              # tear down
 ```
 
 `up.sh` writes a repo-local `.kubeconfig` and leaves yours alone: `export KUBECONFIG=$PWD/.kubeconfig`.
+
+Traces: `kubectl port-forward -n telemetry svc/jaeger 16686`, then http://localhost:16686. `app.py ask` and `app.py order` print the run's `trace_id`. Nothing in the cluster can reach the query port. Storage is in memory, so traces do not survive a restart of the Jaeger pod.
 
 Without a provider key, `smart` is served by a local model: the host's Ollama when it is running (`ollama pull llama3.2:3b && ollama serve`; the cluster reaches it at `host.docker.internal`), otherwise the in-cluster one, which on CPU is too slow for the ERP agent. Ask the agent something:
 
@@ -75,10 +78,18 @@ The order tools from AWS's *Secure AI Agents on Amazon EKS* workshop (labs 3 and
 
 ```sh
 scripts/tools-up.sh     # after up.sh: image, orders table, server, route, policy
-scripts/tools-smoke.sh  # 13 checks: identity, visibility, calls, isolation
+scripts/tools-smoke.sh  # 20 checks: identity, visibility, calls, the agent's tool workflow, isolation
+kubectl exec -n agents deploy/research-agent -c agent -- python app.py order ORD-1001
 ```
 
-Not built yet: an agent that calls these tools as a workflow activity, and the prompt-injection controls tool output needs (adp-2id).
+The sample agent's `order_status` workflow calls `lookup_order` as a workflow activity, like a model call: recorded, so a resumed run does not repeat it. Its MCP client is about forty lines of standard library (`agent/app.py`), and the gateway, not the agent, decides which tools it has.
+
+Tool output is data, not instructions. Two layers, tested with a hostile record (`ORD-6666`, whose customer name tells the model to approve a refund):
+
+- **Structural (the defense):** the record reaches a model step that has no tools, framed as data in a system message and a delimited block, and whose only output is reply text. A successful injection can word a reply badly; it cannot act.
+- **Gateway prompt guard (a tripwire):** `platform/gateway/guardrails.yaml` rejects requests carrying known injection phrases before any model sees them (403, logged). It catches only the phrasings it lists.
+
+With the guard removed, the local 3B model given the hostile record wrote a plain shipping reply in 4 of 4 runs; that is a small sample, not a guarantee. Not built: an output-side check of what a reply may claim, and a classifier-grade guard (the policy also takes a webhook, OpenAI Moderation, Bedrock Guardrails or Model Armor).
 
 ## Sandboxed code execution (opt-in)
 
@@ -143,6 +154,7 @@ Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate
 | `platform/aws/` | floci, standing in for the AWS account |
 | `platform/secrets/` | Secrets Manager to gateway key sync |
 | `platform/dapr/` | State store component and Dapr configuration for agents |
+| `platform/telemetry/` | Jaeger v2 (an OpenTelemetry Collector distribution): OTLP in from the gateway and agents, query by port-forward only |
 | `platform/agents/` | Tenant namespace policy and the sample agent's deployment |
 | `agent/` | The sample durable agent |
 | `tools/` | The opt-in tools stage: the workshop's orders MCP server and its gateway route and policy |
