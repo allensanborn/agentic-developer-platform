@@ -53,3 +53,14 @@ spec:
   accessControl:
     defaultAction: deny
     trustDomain: public
+  # The sidecar's own API serves only health (for the SDK's startup wait). A hijacked agent
+  # cannot list components, read or write state, or call other apps or bindings through it
+  # (adp-vba). Workflow is unaffected: it runs on durabletask's gRPC service, which the
+  # allow-list does not filter. The list needs at least one gRPC rule that daprd recognises,
+  # or it silently allows everything (an unknown name.version, e.g. "workflows v1" on 1.19,
+  # maps to nothing). shutdown.v1 is that rule: it lets the app stop its own sidecar, which
+  # it could do by exiting. smoke.sh calls GetState over gRPC to prove the list is live.
+  api:
+    allowed:
+      - {name: shutdown, version: v1, protocol: grpc}
+      - {name: healthz, version: v1.0, protocol: http}

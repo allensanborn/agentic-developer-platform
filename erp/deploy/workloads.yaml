@@ -26,7 +26,7 @@ spec:
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: erp-controller
-        dapr.io/config: erp
+        dapr.io/config: erp-controller
         dapr.io/disable-builtin-k8s-secret-store: "true"
         dapr.io/app-port: "8080"
     spec:
@@ -81,7 +81,7 @@ spec:
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: erp-agent
-        dapr.io/config: erp
+        dapr.io/config: erp-agent
         dapr.io/disable-builtin-k8s-secret-store: "true"
     spec:
       serviceAccountName: erp-agent
@@ -148,7 +148,7 @@ spec:
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: erp-executor
-        dapr.io/config: erp
+        dapr.io/config: erp-executor
         dapr.io/disable-builtin-k8s-secret-store: "true"
     spec:
       serviceAccountName: erp-executor
