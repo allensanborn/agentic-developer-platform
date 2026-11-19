@@ -5,5 +5,8 @@ ipam:
   mode: kubernetes
 hubble:
   enabled: true # drop records: the blocked-egress signal
+  metrics:
+    # hubble_drop_total by reason and source pod, scraped by platform/telemetry/prometheus.yaml
+    enabled: ["drop:sourceContext=pod;destinationContext=dns|ip"]
   relay:
     enabled: false

@@ -16,3 +16,12 @@ resources:
   - dapr/agents.yaml
   - autoscaling/vpa.yaml
   - telemetry/jaeger.yaml
+  - telemetry/prometheus.yaml
+# Generated, so a rule or scrape change rolls Prometheus (the name carries a content hash).
+configMapGenerator:
+  - name: prometheus-config
+    namespace: telemetry
+    files: [telemetry/prometheus.yml]
+  - name: prometheus-rules
+    namespace: telemetry
+    files: [telemetry/alerts.yml]
