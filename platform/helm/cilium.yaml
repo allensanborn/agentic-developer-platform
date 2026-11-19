@@ -1,0 +1,9 @@
+# Cilium on k3d (ADR 0014). kube-proxy stays; Cilium is the CNI and the policy enforcer.
+operator:
+  replicas: 1
+ipam:
+  mode: kubernetes
+hubble:
+  enabled: true # drop records: the blocked-egress signal
+  relay:
+    enabled: false

@@ -100,8 +100,7 @@ if ! aws dynamodb get-item --table-name adp-orders --key '{"order_id":{"S":"ORD-
 fi
 
 kubectl apply -k sandbox/deploy >/dev/null
-api=$(kubectl get endpoints kubernetes -n default -o jsonpath='{.subsets[0].addresses[0].ip} {.subsets[0].ports[0].port}')
-sed "s|__API_IP__|${api% *}|; s|__API_PORT__|${api#* }|" sandbox/deploy/broker-api-egress.yaml | kubectl apply -f - >/dev/null
+kubectl apply -f sandbox/deploy/broker-api-egress.yaml >/dev/null # not in kustomization: a Cilium CRD
 kubectl rollout status -n agent-sandbox-system deploy/sandbox-router-deployment --timeout=5m
 kubectl rollout restart -n tools deploy/code-executor >/dev/null # pick up a rebuilt image
 kubectl rollout status -n tools deploy/code-executor --timeout=3m

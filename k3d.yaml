@@ -1,5 +1,5 @@
-# k3d, not kind: k3s ships a NetworkPolicy controller (kube-router), kindnet ignores
-# NetworkPolicy, and the isolation in platform/ depends on it being enforced.
+# k3d, not kind: the isolation in platform/ depends on NetworkPolicy being enforced, and
+# kindnet ignores it. Since ADR 0014 the enforcer is Cilium, not k3s's kube-router.
 apiVersion: k3d.io/v1alpha5
 kind: Simple
 servers: 1
@@ -9,6 +9,12 @@ options:
     extraArgs:
       # Nothing here uses Traefik, and it installs its own Gateway API CRDs.
       - arg: --disable=traefik
+        nodeFilters: [server:*]
+      # Cilium is the CNI and enforces NetworkPolicy (ADR 0014): it can fence egress by name
+      # and log what it drops. kube-router can do neither.
+      - arg: --flannel-backend=none
+        nodeFilters: [server:*]
+      - arg: --disable-network-policy
         nodeFilters: [server:*]
   kubeconfig:
     # scripts/env.sh points KUBECONFIG at a repo-local file; the user's own stays untouched.
