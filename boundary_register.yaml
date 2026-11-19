@@ -228,8 +228,8 @@ entries:
     records:
     - kind: file
       path: agent/app.py
-      line: 119
-      sha256: 92d17cdd7b06433a12b7e3d9974c2dea4c3ce2914ecf75239d781a883c6f48a6
+      line: 135
+      sha256: b2d9731c8bcc5a18b389ae005117ea03a705dce96be5322e825aa5b00daf10e9
 - id: alias-smart
   kind: name
   relation: equal
@@ -249,12 +249,12 @@ entries:
     records:
     - kind: file
       path: agent/app.py
-      line: 124
-      sha256: 92d17cdd7b06433a12b7e3d9974c2dea4c3ce2914ecf75239d781a883c6f48a6
+      line: 140
+      sha256: b2d9731c8bcc5a18b389ae005117ea03a705dce96be5322e825aa5b00daf10e9
     - kind: file
       path: agent/app.py
-      line: 109
-      sha256: 92d17cdd7b06433a12b7e3d9974c2dea4c3ce2914ecf75239d781a883c6f48a6
+      line: 122
+      sha256: b2d9731c8bcc5a18b389ae005117ea03a705dce96be5322e825aa5b00daf10e9
   - party: erp-agent
     role: consumes
     value: smart
@@ -441,7 +441,7 @@ entries:
     - kind: file
       path: scripts/tools-smoke.sh
       line: 9
-      sha256: 8ff34bf5be5f6ff76b363b5cf28217201f5e08ac62a1c6b912e895967da506ab
+      sha256: ad8696bf83c97216ca39de9ad3c7550e85f9efa149f98d713e2afdc720a782bd
 - id: orders-table
   kind: table
   relation: equal
@@ -470,4 +470,4 @@ entries:
     - kind: file
       path: tools/orders-mcp/seed.json
       line: 2
-      sha256: 64795d0f0c31aebb691df74dde81570e6440c0fa42be1f047a2c6f41395e0d9e
+      sha256: fb5646c0d6abe7129aca926ef3c98c637338aaa63d323e3ccc28eb8000e7d37c

@@ -97,6 +97,12 @@ out=$(kubectl exec -n agents deploy/research-agent -c agent -- python app.py ord
 check "an unknown order ends the run without asking a model" "null null" \
   "$(jq -r '"\(.result.reply) \(.result.model)"' <<<"$out" 2>/dev/null)"
 
+out=$(kubectl exec -n agents deploy/research-agent -c agent -- python app.py order ORD-6666 2>/dev/null | tail -n1)
+check "a record carrying an injection reaches the agent as tool output" true \
+  "$(jq -r '.result.order.result.customer | test("(?i)ignore all previous instructions")' <<<"$out" 2>/dev/null)"
+check "the gateway's prompt guard refuses the model call; no reply is written" "true null" \
+  "$(jq -r '"\((.result.refused // "") | test("prompt guard")) \(.result.reply)"' <<<"$out" 2>/dev/null)"
+
 echo "--- network isolation"
 check "agents cannot reach the tools server directly" 000 "$(status agents http://orders-mcp.tools.svc.cluster.local:8080/mcp)"
 check "a namespace without the client label cannot reach the tools listener" 000 "$(status default $MCP "$intern")"

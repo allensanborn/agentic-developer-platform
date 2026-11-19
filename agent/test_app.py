@@ -58,3 +58,19 @@ def test_tool_sends_identity_and_session_and_reports_hidden_tools(tmp_path, monk
     assert all(r.get_header("Authorization") == "Bearer tok" for r in reqs)
     assert reqs[0].get_header("Mcp-session-id") is None and reqs[2].get_header("Mcp-session-id") == "s1"
     assert json.loads(reqs[2].data)["params"] == {"name": "lookup_order", "arguments": {"order_id": "ORD-1001"}}
+
+
+def test_chat_returns_gateway_refusals_and_raises_faults(tmp_path, monkeypatch):
+    token = tmp_path / "token"
+    token.write_text("tok\n")
+    monkeypatch.setattr(app, "TOKEN_FILE", str(token))
+    refused = urllib.error.HTTPError("u", 403, "Forbidden", {}, io.BytesIO(b"rejected by the gateway's prompt guard"))
+    with mock.patch("urllib.request.urlopen", side_effect=refused):
+        assert app.chat("smart", "hi", system="be brief") == {"alias": "smart", "refused": "rejected by the gateway's prompt guard"}
+    fault = urllib.error.HTTPError("u", 503, "Unavailable", {}, io.BytesIO(b""))
+    with mock.patch("urllib.request.urlopen", side_effect=fault):
+        try:
+            app.chat("smart", "hi")
+            raise AssertionError("a 503 must raise so the activity retries")
+        except urllib.error.HTTPError as e:
+            assert e.code == 503
