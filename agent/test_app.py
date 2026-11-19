@@ -74,3 +74,24 @@ def test_chat_returns_gateway_refusals_and_raises_faults(tmp_path, monkeypatch):
             raise AssertionError("a 503 must raise so the activity retries")
         except urllib.error.HTTPError as e:
             assert e.code == 503
+
+
+def test_model_and_tool_calls_carry_the_runs_traceparent(tmp_path, monkeypatch):
+    from opentelemetry.sdk.trace import TracerProvider
+
+    token = tmp_path / "token"
+    token.write_text("tok\n")
+    monkeypatch.setattr(app, "TOKEN_FILE", str(token))
+    tracer = TracerProvider().get_tracer("test")
+    reply = {"model": "m", "usage": {"total_tokens": 1}, "choices": [{"message": {"content": "hi"}}]}
+    with tracer.start_as_current_span("run") as root:
+        carrier: dict = {}
+        app.propagate.inject(carrier)
+    trace_id = format(root.get_span_context().trace_id, "032x")
+    # An activity continues the run from the carrier it was given, not from ambient context.
+    with mock.patch.object(app, "tracer", tracer), \
+         mock.patch("urllib.request.urlopen", side_effect=lambda *a, **k: io.BytesIO(json.dumps(reply).encode())) as sent:
+        with app.traced("call_model smart", {"trace": carrier}):  # the body of the call_model activity
+            app.chat("smart", "hi")
+    header = sent.call_args.args[0].get_header("Traceparent")
+    assert header and header.split("-")[1] == trace_id

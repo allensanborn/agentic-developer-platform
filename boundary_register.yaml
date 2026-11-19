@@ -22,8 +22,8 @@ entries:
     records:
     - kind: file
       path: platform/agents/research-agent.yaml
-      line: 56
-      sha256: ac4dd929905ff96b85494ca70dc6ae2438d3ad3039efe90692fb3965202d5ffe
+      line: 59
+      sha256: 35fed739d8c10bdf0696de36c126b38af11f7eb66549134cf1bfbac73d477f8e
   - party: erp-agent
     role: presents
     value: ai-gateway
@@ -228,8 +228,8 @@ entries:
     records:
     - kind: file
       path: agent/app.py
-      line: 135
-      sha256: b2d9731c8bcc5a18b389ae005117ea03a705dce96be5322e825aa5b00daf10e9
+      line: 170
+      sha256: 6ac45784523920de5f0e05c1f79fdd7d47bc352338a67ee0d1bedb7ff6d7664d
 - id: alias-smart
   kind: name
   relation: equal
@@ -249,12 +249,12 @@ entries:
     records:
     - kind: file
       path: agent/app.py
-      line: 140
-      sha256: b2d9731c8bcc5a18b389ae005117ea03a705dce96be5322e825aa5b00daf10e9
+      line: 175
+      sha256: 6ac45784523920de5f0e05c1f79fdd7d47bc352338a67ee0d1bedb7ff6d7664d
     - kind: file
       path: agent/app.py
-      line: 122
-      sha256: b2d9731c8bcc5a18b389ae005117ea03a705dce96be5322e825aa5b00daf10e9
+      line: 156
+      sha256: 6ac45784523920de5f0e05c1f79fdd7d47bc352338a67ee0d1bedb7ff6d7664d
   - party: erp-agent
     role: consumes
     value: smart
@@ -379,7 +379,7 @@ entries:
     - kind: file
       path: platform/agents/research-agent.yaml
       line: 1
-      sha256: ac4dd929905ff96b85494ca70dc6ae2438d3ad3039efe90692fb3965202d5ffe
+      sha256: 35fed739d8c10bdf0696de36c126b38af11f7eb66549134cf1bfbac73d477f8e
   - party: erp-agent
     role: denies
     value: openrouter-apikey
