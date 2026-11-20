@@ -18,6 +18,7 @@ resources:
   - autoscaling/vpa.yaml
   - telemetry/lgtm.yaml
   - telemetry/alertmanager.yaml
+  - telemetry/alert-receiver.yaml
 # Generated, so a rule or scrape change rolls Prometheus (the name carries a content hash).
 configMapGenerator:
   - name: lgtm-prometheus
@@ -32,3 +33,12 @@ configMapGenerator:
   - name: alertmanager-config
     namespace: telemetry
     files: [telemetry/alertmanager.yml]
+  - name: alert-receiver
+    namespace: telemetry
+    files: [telemetry/alert-receiver.py]
+  - name: grafana-dashboards
+    namespace: telemetry
+    files: [telemetry/grafana-dashboards.yaml]
+  - name: grafana-dashboard-json
+    namespace: telemetry
+    files: [telemetry/dashboards/ai-gateway.json]

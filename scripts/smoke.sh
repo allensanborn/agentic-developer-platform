@@ -147,7 +147,13 @@ kubectl port-forward -n telemetry svc/lgtm 13000:3000 19090:9090 13200:3200 1310
 pf=$!
 kubectl port-forward -n telemetry svc/alertmanager 19093:9093 >/dev/null 2>&1 &
 pf_am=$!
-for _ in $(seq 1 30); do curl -s -m 1 -o /dev/null localhost:13200/ready && curl -s -m 1 -o /dev/null localhost:19093/-/ready && break; sleep 1; done
+# Wait until every forwarded port answers. A stale forward still holding one of these ports
+# (from an earlier run or a manual port-forward) would otherwise fail only the checks behind it.
+for _ in $(seq 1 30); do
+  curl -sf -m 1 -o /dev/null localhost:13200/ready && curl -sf -m 1 -o /dev/null localhost:19090/-/ready &&
+    curl -sf -m 1 -o /dev/null localhost:19093/-/ready && break
+  sleep 1
+done
 tid=$(jq -r .trace_id <<<"$out" 2>/dev/null)
 spans() { # trace id: "<service> <span id> <parent id> <name> <jwt.sub> <output tokens> <endpoint>" per span
   # Both sides export in batches, seconds apart: wait until both services have reported and
@@ -217,15 +223,34 @@ check "a burst of refusals raises GatewayDenialBurst for that caller" yes \
   "$(firing GatewayDenialBurst '.labels.caller == "system:serviceaccount:agents:intern" and .labels.status == "403"')"
 check "the gateway probe's blocked egress raises EgressPolicyDrop for that pod" yes \
   "$(firing EgressPolicyDrop '.labels.source == "ai-gateway/adp-smoke-gw"')"
-routed() { # alertname: yes once Alertmanager holds it (Prometheus pushes on its next evaluation)
+routed() { # yes once Alertmanager has received a firing alert. Its counter, not its alert list:
+  # a one-minute burst alert resolves, and leaves the list, before a slow check looks.
   for _ in $(seq 1 12); do
-    curl -s -m 5 localhost:19093/api/v2/alerts | jq -e --arg a "$1" '[.[] | select(.labels.alertname == $a)] | length > 0' >/dev/null 2>&1 &&
+    curl -s -m 5 localhost:19093/metrics | awk '/^alertmanager_alerts_received_total\{.*status="firing"/ {n += $NF} END {exit !(n > 0)}' &&
       { echo yes; return; }
     sleep 5
   done
   echo no
 }
-check "the firing alert reaches Alertmanager" yes "$(routed GatewayDenialBurst)"
+check "the firing alert reaches Alertmanager" yes "$(routed)"
+delivered() { # alertname: yes once the webhook receiver has logged it (Alertmanager groups for 10 s)
+  for _ in $(seq 1 12); do
+    kubectl logs -n telemetry deploy/alert-receiver --since=15m 2>/dev/null | grep -q "\"alertname\": \"$1\"" && { echo yes; return; }
+    sleep 5
+  done
+  echo no
+}
+check "Alertmanager delivers it to the webhook receiver" yes "$(delivered GatewayDenialBurst)"
+check "the AI gateway dashboard is provisioned, visible to an anonymous viewer" adp-ai-gateway \
+  "$(curl -s -m 5 'localhost:13000/api/search?query=AI%20gateway' | jq -r '.[0].uid // empty')"
+# Each Prometheus panel this run's own traffic feeds must return data: a renamed metric or label
+# would otherwise just draw an empty panel. Tool calls come from tools-smoke.sh, not this script.
+fed=0 total=0
+while IFS= read -r expr; do
+  total=$((total + 1))
+  promq "$expr" | jq -e '(.data.result | length) > 0' >/dev/null 2>&1 && fed=$((fed + 1))
+done < <(jq -r '.panels[] | select(.datasource.type == "prometheus" and (.title | startswith("Tool calls") | not)) | .targets[].expr' platform/telemetry/dashboards/ai-gateway.json)
+check "every dashboard panel this run feeds returns data" "$total/$total" "$fed/$total"
 check "Grafana is up and read-only to an anonymous viewer" "ok 403" \
   "$(curl -s -m 5 localhost:13000/api/health | jq -r .database) $(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST localhost:13000/api/datasources -H 'Content-Type: application/json' -d '{"name":"x","type":"prometheus","access":"proxy"}')"
 check "Grafana has no login to attack" 400 \

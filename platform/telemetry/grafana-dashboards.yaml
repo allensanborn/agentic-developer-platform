@@ -1,0 +1,10 @@
+# Grafana provisioning: ADP's dashboards (platform/telemetry/dashboards/), beside the image's own.
+apiVersion: 1
+providers:
+  - name: adp
+    folder: ADP
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /otel-lgtm/dashboards/adp
