@@ -1,0 +1,287 @@
+# Observability (ADR 0017): grafana/otel-lgtm, one pod holding an OpenTelemetry Collector,
+# Prometheus, Tempo, Loki and Grafana. Everything else speaks OTLP to its Collector, so the
+# production form (Grafana's Helm charts or Grafana Cloud, the same components) is a change of
+# endpoint, not of instrumentation. Upstream calls this image development, demo and testing
+# only: in-memory storage (emptyDir), one replica.
+#
+# What reports here:
+#   - gateway: a span per model and tool call (gen_ai.*, jwt.sub) -> Tempo; an access-log
+#     record per request -> Loki; Prometheus metrics labelled with the caller -> scraped.
+#   - research-agent: a span per workflow activity, with traceparent, so gateway spans nest.
+#   - Cilium: hubble_drop_total -> scraped.
+# Prometheus evaluates alerts.yml (promtool-tested in dagger call check) and sends firing
+# alerts to Alertmanager (alertmanager.yaml); Grafana shows traces, logs, metrics and alerts.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: telemetry
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lgtm
+  namespace: telemetry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lgtm
+  template:
+    metadata:
+      labels:
+        app: lgtm
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 0 # the image's files are group 0; upstream runs non-root as <uid>:0
+        fsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: lgtm
+          image: grafana/otel-lgtm:0.40.0@sha256:72e05804790e6e0d8c0b70a6d5ff1f721ef7b203463374631e99aa3429bd0cf6
+          env:
+            # Upstream defaults to anonymous *Admin*. Read-only for anyone who port-forwards,
+            # and no login form, so there is no admin credential to keep or leak: data
+            # sources and settings come from these files, not the UI.
+            - {name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Viewer}
+            - {name: GF_AUTH_DISABLE_LOGIN_FORM, value: "true"}
+            - {name: GF_AUTH_BASIC_ENABLED, value: "false"}
+          ports:
+            - {name: otlp-grpc, containerPort: 4317}
+            - {name: otlp-http, containerPort: 4318}
+            - {name: grafana, containerPort: 3000}
+            - {name: prometheus, containerPort: 9090}
+            - {name: tempo, containerPort: 3200}
+            - {name: loki, containerPort: 3100}
+          readinessProbe:
+            httpGet: {path: /api/health, port: 3000}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 200m, memory: 1Gi}
+            limits: {memory: 3Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: tmp, mountPath: /tmp} # the launcher's readiness marker, components' scratch
+            # Read-only root, non-root: the image writes only where something is mounted. Tempo
+            # also keeps state in /var/tempo and Loki in /loki, outside /data (upstream runs as
+            # root with a writable root, so its manifest does not need these).
+            - {name: tempo-state, mountPath: /var/tempo}
+            - {name: loki-state, mountPath: /loki}
+            - {name: prometheus-config, mountPath: /otel-lgtm/prometheus.yaml, subPath: lgtm-prometheus.yaml}
+            - {name: rules, mountPath: /otel-lgtm/rules}
+            - {name: grafana-alertmanager, mountPath: /otel-lgtm/grafana/conf/provisioning/datasources/alertmanager.yaml, subPath: grafana-alertmanager.yaml}
+      volumes:
+        - name: data
+          emptyDir: {sizeLimit: 4Gi}
+        - name: tmp
+          emptyDir: {}
+        - name: tempo-state
+          emptyDir: {}
+        - name: loki-state
+          emptyDir: {}
+        - name: prometheus-config
+          configMap: {name: lgtm-prometheus}
+        - name: rules
+          configMap: {name: prometheus-rules}
+        - name: grafana-alertmanager
+          configMap: {name: grafana-alertmanager}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lgtm
+  namespace: telemetry
+spec:
+  selector:
+    app: lgtm
+  ports:
+    - {name: otlp-grpc, port: 4317, appProtocol: grpc}
+    - {name: otlp-http, port: 4318}
+    - {name: grafana, port: 3000}
+    - {name: prometheus, port: 9090}
+    - {name: tempo, port: 3200}
+    - {name: loki, port: 3100}
+---
+# In: the gateway's OTLP/gRPC and the agents' OTLP/HTTP, nothing else; Grafana, Prometheus,
+# Tempo and Loki are read with a port-forward.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: lgtm
+  namespace: telemetry
+spec:
+  podSelector:
+    matchLabels:
+      app: lgtm
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: ai-gateway
+      ports:
+        - port: 4317
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+      ports:
+        - port: 4318
+---
+# Out: DNS, the two scrape targets and Alertmanager. A CiliumNetworkPolicy, because the Cilium
+# agents run on the host network (the host/remote-node entities, ADR 0014). No internet: the
+# image's start-up download of a Grafana plugin fails and Grafana runs without it.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: lgtm-egress
+  namespace: telemetry
+spec:
+  endpointSelector:
+    matchLabels:
+      app: lgtm
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports: [{port: "53", protocol: ANY}]
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: ai-gateway
+            gateway.networking.k8s.io/gateway-name: ai-gateway
+      toPorts:
+        - ports: [{port: "15020", protocol: TCP}]
+    - toEntities: [host, remote-node]
+      toPorts:
+        - ports: [{port: "9965", protocol: TCP}]
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: telemetry
+            app: alertmanager
+      toPorts:
+        - ports: [{port: "9093", protocol: TCP}]
+---
+# The gateway's metrics port, for DNS discovery. Headless: Prometheus scrapes each pod, not a
+# load-balanced pick. The gateway's own Service exposes only its listeners.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-gateway-metrics
+  namespace: ai-gateway
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/instance: ai-gateway
+    app.kubernetes.io/name: ai-gateway
+    gateway.networking.k8s.io/gateway-name: ai-gateway
+  ports:
+    - {name: metrics, port: 15020, targetPort: 15020}
+---
+# The gateway's telemetry policy lives in ai-gateway and points at a Service here.
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: gateway-tracing
+  namespace: telemetry
+spec:
+  from:
+    - group: agentgateway.dev
+      kind: AgentgatewayPolicy
+      namespace: ai-gateway
+  to:
+    - group: ""
+      kind: Service
+      name: lgtm
+---
+# Named `tracing` since adp-bio; it now carries all three of the gateway's signals.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: tracing
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+  frontend:
+    tracing:
+      backendRef:
+        kind: Service
+        name: lgtm
+        namespace: telemetry
+        port: 4317
+      # Trace every call, including ones that arrive without a traceparent.
+      randomSampling: "true"
+    # The access log also goes to Loki over OTLP: who called what, and the outcome, kept
+    # beside the traces instead of only in the pod's stdout.
+    accessLog:
+      otlp:
+        backendRef:
+          kind: Service
+          name: lgtm
+          namespace: telemetry
+          port: 4317
+    # Every Prometheus metric carries the caller's identity, so platform/telemetry/alerts.yml
+    # can rate and count per caller (adp-0c0). Unauthenticated requests get no label.
+    metrics:
+      attributes:
+        add:
+          - name: caller
+            expression: jwt.sub
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-gateway-telemetry
+  namespace: ai-gateway
+spec:
+  podSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: ai-gateway
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: telemetry
+          podSelector:
+            matchLabels:
+              app: lgtm
+      ports:
+        - port: 4317
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-egress-telemetry
+  namespace: agents
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: telemetry
+          podSelector:
+            matchLabels:
+              app: lgtm
+      ports:
+        - port: 4318

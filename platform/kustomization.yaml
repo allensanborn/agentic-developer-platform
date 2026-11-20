@@ -16,13 +16,19 @@ resources:
   - secrets/provider-keys.yaml
   - dapr/agents.yaml
   - autoscaling/vpa.yaml
-  - telemetry/jaeger.yaml
-  - telemetry/prometheus.yaml
+  - telemetry/lgtm.yaml
+  - telemetry/alertmanager.yaml
 # Generated, so a rule or scrape change rolls Prometheus (the name carries a content hash).
 configMapGenerator:
-  - name: prometheus-config
+  - name: lgtm-prometheus
     namespace: telemetry
-    files: [telemetry/prometheus.yml]
+    files: [telemetry/lgtm-prometheus.yaml]
   - name: prometheus-rules
     namespace: telemetry
     files: [telemetry/alerts.yml]
+  - name: grafana-alertmanager
+    namespace: telemetry
+    files: [telemetry/grafana-alertmanager.yaml]
+  - name: alertmanager-config
+    namespace: telemetry
+    files: [telemetry/alertmanager.yml]

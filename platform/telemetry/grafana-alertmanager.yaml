@@ -1,0 +1,11 @@
+# Grafana provisioning: show Alertmanager's alerts and silences beside the other signals.
+# Added to the image's own data sources (Prometheus, Tempo, Loki, Pyroscope).
+apiVersion: 1
+datasources:
+  - name: Alertmanager
+    type: alertmanager
+    uid: alertmanager
+    url: http://alertmanager.telemetry.svc.cluster.local:9093
+    jsonData:
+      implementation: prometheus
+      handleGrafanaManagedAlerts: false

@@ -141,28 +141,31 @@ check "the agent's sidecar refuses APIs the agent does not use (state)" UNIMPLEM
   "$(kubectl exec -n agents deploy/research-agent -c agent -- python -c "$SIDECAR_RPC" GetState 2>/dev/null | tail -n1)"
 echo "      $(jq -c .result.steps <<<"$out" 2>/dev/null)"
 
-echo "--- traces (platform/telemetry/)"
-# Read with a port-forward: nothing in the cluster may reach the query port.
-kubectl port-forward -n telemetry svc/jaeger 16687:16686 >/dev/null 2>&1 &
+echo "--- observability (platform/telemetry/, ADR 0017)"
+# Read with port-forwards: nothing in the cluster may reach the query ports.
+kubectl port-forward -n telemetry svc/lgtm 13000:3000 19090:9090 13200:3200 13100:3100 >/dev/null 2>&1 &
 pf=$!
-for _ in $(seq 1 20); do curl -s -m 1 -o /dev/null localhost:16687/api/v3/services && break; sleep 1; done
+kubectl port-forward -n telemetry svc/alertmanager 19093:9093 >/dev/null 2>&1 &
+pf_am=$!
+for _ in $(seq 1 30); do curl -s -m 1 -o /dev/null localhost:13200/ready && curl -s -m 1 -o /dev/null localhost:19093/-/ready && break; sleep 1; done
+tid=$(jq -r .trace_id <<<"$out" 2>/dev/null)
 spans() { # trace id: "<service> <span id> <parent id> <name> <jwt.sub> <output tokens> <endpoint>" per span
   # Both sides export in batches, seconds apart: wait until both services have reported and
   # the span count has stopped changing, or a check would judge half a trace.
   local prev=-1 n
   for _ in $(seq 1 20); do
-    t=$(curl -s -m 5 "localhost:16687/api/v3/traces/$1")
-    n=$(jq '[.result.resourceSpans[]?.scopeSpans[].spans[]] | length' <<<"$t" 2>/dev/null || echo 0)
-    if [ "$n" = "$prev" ] && [ "$(jq '[.result.resourceSpans[]?] | length' <<<"$t" 2>/dev/null)" -ge 2 ]; then break; fi
+    t=$(curl -s -m 5 "localhost:13200/api/v2/traces/$1")
+    n=$(jq '[.trace.resourceSpans[]?.scopeSpans[].spans[]] | length' <<<"$t" 2>/dev/null || echo 0)
+    if [ "$n" = "$prev" ] && [ "$(jq '[.trace.resourceSpans[]?] | length' <<<"$t" 2>/dev/null)" -ge 2 ]; then break; fi
     prev=$n
     sleep 3
   done
-  jq -r '.result.resourceSpans[] | (.resource.attributes[] | select(.key == "service.name") | .value.stringValue) as $svc
+  jq -r '.trace.resourceSpans[] | (.resource.attributes[] | select(.key == "service.name") | .value.stringValue) as $svc
     | .scopeSpans[].spans[] | (.attributes // [] | map({(.key): (.value | to_entries[0].value)}) | add // {}) as $a
     | "\($svc) \(.spanId) \(.parentSpanId // "-") \(.name | gsub(" "; "_")) \($a["jwt.sub"] // "-") \($a["gen_ai.usage.output_tokens"] // "-") \($a.endpoint // "-")"' <<<"$t" 2>/dev/null
 }
-tr=$(spans "$(jq -r .trace_id <<<"$out" 2>/dev/null)")
-check "one research run is one trace, across the agent and the gateway" "ai-gateway research-agent" \
+tr=$(spans "$tid")
+check "one research run is one trace (Tempo), across the agent and the gateway" "ai-gateway research-agent" \
   "$(awk '{print $1}' <<<"$tr" | sort -u | xargs)"
 agent_ids=$(awk '$1 == "research-agent" {print $2}' <<<"$tr")
 chat_parents=$(awk '$1 == "ai-gateway" && $4 == "POST_/v1/chat/completions" {print $3}' <<<"$tr")
@@ -170,16 +173,20 @@ check "every gateway model call (at least the draft and the review) nests under 
   "$([ "$(grep -c . <<<"$chat_parents")" -ge 2 ] && echo yes || echo no) $(grep -cvxF "$agent_ids" <<<"$chat_parents")"
 check "the gateway span records who called, the tokens and which endpoint answered" yes \
   "$(awk '$4 == "POST_/v1/chat/completions" && $5 == "system:serviceaccount:agents:research-agent" && $6 > 0 && $7 != "-" {f = 1} END {print f ? "yes" : "no"}' <<<"$tr")"
-check "agents cannot reach the trace query port" 000 "$(status agents http://jaeger.telemetry.svc.cluster.local:16686/)"
-kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
+logged() { # the gateway's access log for this run, in Loki, by caller and trace id: polls (batched)
+  local q="{service_name=\"ai-gateway\"} | jwt_sub=\"system:serviceaccount:agents:research-agent\" | trace_id=\"$tid\""
+  for _ in $(seq 1 12); do
+    curl -s -m 5 -G localhost:13100/loki/api/v1/query_range --data-urlencode "query=$q" \
+      --data-urlencode "start=$(($(date +%s) - 900))000000000" | jq -e '[.data.result[].values[]] | length >= 2' >/dev/null 2>&1 &&
+      { echo yes; return; }
+    sleep 5
+  done
+  echo no
+}
+check "the gateway's access log for that run is in Loki, with the caller and the trace id" yes "$(logged)"
 
-echo "--- detections (platform/telemetry/alerts.yml)"
-# Read with a port-forward: nothing in the cluster may reach Prometheus.
-kubectl port-forward -n telemetry svc/prometheus 19090:9090 >/dev/null 2>&1 &
-pf=$!
 prom() { curl -s -m 5 "localhost:19090/api/v1/$1"; }
 promq() { curl -s -m 5 -G localhost:19090/api/v1/query --data-urlencode "query=$1"; } # -G: no curl {} globbing
-for _ in $(seq 1 30); do prom status/buildinfo >/dev/null && break; sleep 1; done
 nodes=$(kubectl get nodes --no-headers | wc -l | tr -d ' ')
 up=""
 for _ in $(seq 1 12); do # first scrape of a new target takes up to one interval
@@ -210,8 +217,22 @@ check "a burst of refusals raises GatewayDenialBurst for that caller" yes \
   "$(firing GatewayDenialBurst '.labels.caller == "system:serviceaccount:agents:intern" and .labels.status == "403"')"
 check "the gateway probe's blocked egress raises EgressPolicyDrop for that pod" yes \
   "$(firing EgressPolicyDrop '.labels.source == "ai-gateway/adp-smoke-gw"')"
-check "agents cannot reach Prometheus" 000 "$(status agents http://prometheus.telemetry.svc.cluster.local:9090/)"
-kill "$pf" 2>/dev/null; wait "$pf" 2>/dev/null
+routed() { # alertname: yes once Alertmanager holds it (Prometheus pushes on its next evaluation)
+  for _ in $(seq 1 12); do
+    curl -s -m 5 localhost:19093/api/v2/alerts | jq -e --arg a "$1" '[.[] | select(.labels.alertname == $a)] | length > 0' >/dev/null 2>&1 &&
+      { echo yes; return; }
+    sleep 5
+  done
+  echo no
+}
+check "the firing alert reaches Alertmanager" yes "$(routed GatewayDenialBurst)"
+check "Grafana is up and read-only to an anonymous viewer" "ok 403" \
+  "$(curl -s -m 5 localhost:13000/api/health | jq -r .database) $(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST localhost:13000/api/datasources -H 'Content-Type: application/json' -d '{"name":"x","type":"prometheus","access":"proxy"}')"
+check "Grafana has no login to attack" 400 \
+  "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST localhost:13000/login -H 'Content-Type: application/json' -d '{"user":"admin","password":"admin"}')"
+check "agents cannot reach Grafana, Prometheus or Alertmanager" "000 000 000" \
+  "$(status agents http://lgtm.telemetry.svc.cluster.local:3000/) $(status agents http://lgtm.telemetry.svc.cluster.local:9090/) $(status agents http://alertmanager.telemetry.svc.cluster.local:9093/)"
+kill "$pf" "$pf_am" 2>/dev/null; wait "$pf" "$pf_am" 2>/dev/null
 
 echo
 if [ "$fails" -ne 0 ]; then echo "$fails check(s) failed"; exit 1; fi
