@@ -16,7 +16,12 @@ groups:
           summary: "{{ $labels.caller }} is using {{ $value | humanize }} tokens/min"
       - alert: GatewayDenialBurst
         # A burst of refusals: a credential being tried, or an agent probing what it may do.
-        expr: sum by (caller, status) (increase(agentgateway_requests_total{status=~"401|403|429"}[1m])) >= 10
+        # The `or` arm catches a caller's first burst: increase() over a series with no earlier
+        # sample is 0, so a brand-new identity's opening burst would otherwise be invisible.
+        expr: >-
+          sum by (caller, status) (increase(agentgateway_requests_total{status=~"401|403|429"}[1m])) >= 10
+          or (sum by (caller, status) (agentgateway_requests_total{status=~"401|403|429"}) >= 10
+              unless sum by (caller, status) (agentgateway_requests_total{status=~"401|403|429"} offset 1m))
         labels: {severity: warning}
         annotations:
           summary: "{{ $value | humanize }} x HTTP {{ $labels.status }} for caller '{{ $labels.caller }}' in 1m"
@@ -32,7 +37,12 @@ groups:
       - alert: EgressPolicyDrop
         # Cilium dropped a connection a policy does not allow (Hubble). For the gateway or an
         # agent, that is an attempt to reach somewhere it was never meant to.
-        expr: sum by (source) (increase(hubble_drop_total{reason="POLICY_DENIED"}[5m])) > 0
+        # As above: a pod that is new, or new to being dropped, has no earlier sample, and its
+        # first attempts are the ones that matter.
+        expr: >-
+          sum by (source) (increase(hubble_drop_total{reason="POLICY_DENIED"}[5m])) > 0
+          or (sum by (source) (hubble_drop_total{reason="POLICY_DENIED"}) > 0
+              unless sum by (source) (hubble_drop_total{reason="POLICY_DENIED"} offset 5m))
         labels: {severity: warning}
         annotations:
           summary: "{{ $labels.source }} tried {{ $value | humanize }} connection(s) a policy denies"

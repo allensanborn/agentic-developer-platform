@@ -7,6 +7,7 @@ resources:
   - gateway/networkpolicy.yaml
   - gateway/egress-fqdn.yaml
   - gateway/guardrails.yaml
+  - gateway/errors.yaml
   - models/ollama.yaml
   - models/scripted.yaml
   - agents/base.yaml
