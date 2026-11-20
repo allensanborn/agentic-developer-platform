@@ -324,8 +324,8 @@ entries:
     records:
     - kind: file
       path: scripts/up.sh
-      line: 75
-      sha256: 903854fbc47b9b4e3de6c58603dcb86feb370790dcb5d86b282a3e7777aba059
+      line: 68
+      sha256: d38358608fd65134cc8c57c2c640be8c78f04934b9953b149e2d3c28bf123c1d
   - party: secrets
     role: consumes
     value: adp/providers/openrouter
@@ -457,7 +457,7 @@ entries:
     - kind: file
       path: scripts/tools-smoke.sh
       line: 9
-      sha256: ad8696bf83c97216ca39de9ad3c7550e85f9efa149f98d713e2afdc720a782bd
+      sha256: f7b49c77fdef30be16075c82223372f3b4823a95c77ad8277202cf87bb3e233d
   - party: sandbox-smoke
     role: consumes
     value: '8081'
@@ -593,8 +593,8 @@ entries:
     records:
     - kind: file
       path: scripts/sandbox-up.sh
-      line: 54
-      sha256: c360dd94ca5e3f34d1102d8d4c050646baa04f64071afbfe5bf11d3fae1516ed
+      line: 66
+      sha256: 1696c558316170b0dd02c100afbaf2c46af9b315540f6484257dbd89f27ef2c1
   - party: runtime
     role: consumes
     value: adp.dev/gvisor
