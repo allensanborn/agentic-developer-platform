@@ -49,7 +49,19 @@ printf '[runsc_config]\n  oci-seccomp = "true"\n' | docker exec -i "$node" sh -c
 if [ "$have" != "$want" ]; then
   docker exec -i "$node" sh -c "mkdir -p $(dirname "$conf") && cat > $conf" <<<"$want"
   docker restart "$node" >/dev/null # containerd reads runtimes at start
+  cilium_node_mounts "$node" # the restart dropped them (scripts/env.sh)
   kubectl wait --for=condition=Ready "node/$node" --timeout=180s
+  # Every pod on the node came back with a new IP, Dapr schedulers included. Sidecars started
+  # earlier keep the old scheduler addresses and their workflows stall (adp-jks), so wait for
+  # the control planes, then restart every Dapr app to fetch the current ones.
+  kubectl rollout status -n kube-system ds/cilium --timeout=5m
+  kubectl rollout status -n dapr-system statefulset/dapr-scheduler-server --timeout=5m
+  kubectl get deploy -A -o json |
+    jq -r '.items[] | select(.spec.template.metadata.annotations["dapr.io/enabled"] == "true") | "\(.metadata.namespace) \(.metadata.name)"' |
+    while read -r ns name; do
+      kubectl rollout restart -n "$ns" "deploy/$name" >/dev/null
+      kubectl rollout status -n "$ns" "deploy/$name" --timeout=5m
+    done
 fi
 kubectl label node "$node" adp.dev/gvisor=true --overwrite >/dev/null
 

@@ -88,10 +88,14 @@ out=$(kubectl exec -n agents deploy/research-agent -c agent -- python app.py ord
 check "the order workflow completes" COMPLETED "$(jq -r .status <<<"$out" 2>/dev/null)"
 check "it got the order from the tool" "lookup_order Jane Doe" \
   "$(jq -r '"\(.result.order.tool) \(.result.order.result.customer)"' <<<"$out" 2>/dev/null)"
-check "the gateway logged that tool call as research-agent" 1 \
-  "$(kubectl logs -n ai-gateway deploy/ai-gateway --since-time="$since" 2>/dev/null | grep 'listener=mcp' |
-    grep 'http.status=200' | grep 'jwt.sub=system:serviceaccount:agents:research-agent' |
-    grep 'mcp.method.name=tools/call' | grep -c 'gen_ai.tool.name=lookup_order')"
+# Who made the call, not how many times: a workflow activity is at-least-once, so a lost
+# completion re-runs call_tool and the gateway logs the call twice (adp-bux). That is safe for
+# lookup_order; a tool with side effects needs an idempotency key for the same reason.
+calls=$(kubectl logs -n ai-gateway deploy/ai-gateway --since-time="$since" 2>/dev/null | grep 'listener=mcp' |
+  grep 'http.status=200' | grep 'mcp.method.name=tools/call' | grep 'gen_ai.tool.name=lookup_order')
+sub='jwt.sub=system:serviceaccount:agents:research-agent'
+check "the gateway logged that tool call as research-agent, and as no one else" "yes 0" \
+  "$(grep -q "$sub" <<<"$calls" && echo yes || echo no) $(grep -v "$sub" <<<"$calls" | grep -c .)"
 check "and a model wrote the reply" true "$(jq -r '(.result.reply // "") | length > 0' <<<"$out" 2>/dev/null)"
 out=$(kubectl exec -n agents deploy/research-agent -c agent -- python app.py order ORD-9999 2>/dev/null | tail -n1)
 check "an unknown order ends the run without asking a model" "null null" \

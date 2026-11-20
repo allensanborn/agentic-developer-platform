@@ -18,15 +18,8 @@ if kubectl get nodes -o jsonpath='{.items[*].metadata.annotations}' | grep -q 'f
   echo "cluster $CLUSTER runs flannel (created before ADR 0014); recreate it: k3d cluster delete $CLUSTER && scripts/up.sh" >&2
   exit 1
 fi
-# k3d nodes are containers: Cilium needs bpffs and a shared cgroup2 mount in each. They do not
-# survive a node restart, so this runs every time.
 for node in $(docker ps --format '{{.Names}}' | grep -E "^k3d-$CLUSTER-(server|agent)-[0-9]+$"); do
-  docker exec "$node" sh -c '
-    grep -qs " /sys/fs/bpf " /proc/mounts || mount bpffs /sys/fs/bpf -t bpf
-    mount --make-shared /sys/fs/bpf
-    mkdir -p /run/cilium/cgroupv2
-    grep -qs " /run/cilium/cgroupv2 " /proc/mounts || mount -t cgroup2 none /run/cilium/cgroupv2
-    mount --make-shared /run/cilium/cgroupv2'
+  cilium_node_mounts "$node" # scripts/env.sh
 done
 h cilium cilium --repo https://helm.cilium.io --version "$CILIUM_VERSION" \
   -n kube-system -f platform/helm/cilium.yaml
