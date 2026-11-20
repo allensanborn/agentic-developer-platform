@@ -45,6 +45,7 @@ Scope: the platform as built, on one cluster. Method: STRIDE over the trust boun
 | 18 | Machine-speed probing or spending by a valid identity goes unnoticed | Alerts per caller (token velocity, refusal bursts, any 403) and on policy-denied drops (ADR 0016) | `dagger call check`: `Alerts` (promtool); smoke: a refusal burst and a blocked egress each fire their alert |
 | 19 | Text in tool output steers a model into acting (prompt injection) | Per-tool authorization at the gateway; tool output reaches a model step with no tools, framed as data; a prompt-guard tripwire refuses known phrasings | tools-smoke: an injected record reaches the agent as tool output, the guard refuses the model call; `intern` cannot see or call tools it is not granted |
 | 20 | Model-written code escapes its sandbox or exfiltrates | gVisor runtime with enforced seccomp; no network and no Kubernetes API from a claimed sandbox; `run_python` granted to `research-agent` only | sandbox-smoke: own kernel, seccomp enforced, no internet, no API (each beside a control that has them) |
+| 21 | A backend's error text tells a caller which server or provider sits behind an alias, and feeds an agent's trial-and-error | Backend 5xx, and JSON 401/403/429, get a fixed body; the gateway's own decisions pass through (`platform/gateway/errors.yaml`) | smoke: a backend error carries no detail; the prompt guard's refusal still says why |
 
 ## Open risks
 
@@ -60,9 +61,8 @@ Each has a beads issue. None is fully mitigated today.
 | **Rate-limit buckets are per replica** | Budgets multiply with gateway replicas | One replica today |
 | **Dummy static AWS credentials** | Correct for floci only | Comments mark each place an IAM role replaces them |
 | **Secrets in etcd** | The synced key is a Kubernetes Secret | Needs etcd encryption at rest on a real cluster |
-| **Failover hides a rejected key, and fails the first calls after an endpoint dies** | A revoked provider key degrades to the local model with no alert; failover is per-request eviction, so a dead endpoint returns 503 or 401 to a caller before later calls fall through | The hosted 401 is visible in traces, not in a metric (ADR 0016); in-request retry tracked in `adp-alr` |
+| **Failover hides a rejected key, and fails the first calls after an endpoint dies** | A revoked provider key degrades to the local model with no alert; failover is per-request eviction, so the call that finds a dead backend gets its error | The agents retry (workflow activities with a RetryPolicy), and the retry falls through. Gateway-side `traffic.retry` re-sends to the same backend on agentgateway v1.7.0, so it cannot help (`adp-alr`). The hosted 401 is in traces, not a metric |
 | **Images are not signed; no SBOM** | Digest pinning stops substitution, not a bad build | Needs a registry, cosign and admission verification |
 | **The Dapr sidecar shares the agent's network** | The agent container can reach the AWS endpoint the sidecar uses | On AWS the sidecar's role is scoped to one table |
 | **The hosted path is untested with a real key** | Only the placeholder-key failover has run | Needs a key |
-| **Backend errors pass through to callers** | A model server's own error text reaches the caller (embeddings on `smart` returned the server's 501 naming its flags), which fingerprints the backend and feeds an agent's trial-and-error | Minor while only aliases are exposed; re-check as tools are added |
 | **CI is advisory** | Branch protection is not available on this repository's plan, so `dagger call check` (including the harness lock, ADR 0013) can be pushed past | Every change lands through a PR; revisit if the plan changes |

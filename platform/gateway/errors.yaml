@@ -1,0 +1,35 @@
+# A backend's own error text never reaches the caller (adp-bfq). Model servers and providers
+# explain their failures ("Start it with --embeddings", OpenRouter's "Missing Authentication
+# header"), which fingerprints the backend and feeds an agent's trial-and-error loop
+# (GTIG/Mandiant Layer 3: limit error feedback). The status code passes through; the body
+# becomes a fixed OpenAI-style error. The detail stays in the gateway's access log and trace.
+#
+# Mapped: every 5xx, and a 401/403/429 that came back as JSON, which is a provider talking. The
+# gateway's own decisions pass through, because callers act on them: its text/plain 401/403,
+# the prompt guard's stated reason (no content-type at all), and its JSON 400 for a malformed
+# request. Written as one ternary because, on agentgateway v1.7.0, `transformation.conditional`
+# was not applied to responses (tried 2026-11-19), and the content-type lookup is guarded
+# because a missing header otherwise fails the evaluation and turns the response into a 503.
+# ponytail: the body expression runs on every response, so a streamed completion would be
+# buffered; nothing here streams. Gate on response.code first if one ever does.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: upstream-errors
+  namespace: ai-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+      sectionName: llm
+  traffic:
+    transformation:
+      response:
+        body: >-
+          (response.code >= 500 ||
+           (response.code in [401, 403, 429] &&
+            "content-type" in response.headers &&
+            response.headers["content-type"].startsWith("application/json")))
+          ? "{\"error\":{\"message\":\"the model backend failed\",\"type\":\"upstream_error\",\"code\":" + string(response.code) + "}}"
+          : string(response.body)

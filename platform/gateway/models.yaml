@@ -152,6 +152,12 @@ spec:
           weight: 1
 ---
 # --- Public alias: smart. Hosted first, local when the provider is unhealthy.
+# Failover is per-request eviction: the request that finds a backend dead gets its error
+# (503 from a stopped host model, 401 from a rejected key) and later requests skip that backend
+# for 60 s, so every caller must retry. The agents do, as workflow activities with a
+# RetryPolicy. Gateway-side retry does not help: in agentgateway v1.7.0 `traffic.retry` re-sends
+# to the backend already chosen, so tried 2026-11-19 with 3 attempts and a 200 ms backoff it
+# never reached the next priority (adp-alr).
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayModel
 metadata:

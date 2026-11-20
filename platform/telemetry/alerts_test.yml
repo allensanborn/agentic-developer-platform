@@ -50,3 +50,26 @@ tests:
       - eval_time: 2m
         alertname: EgressPolicyDrop
         exp_alerts: []
+  # A series that first appears already counting: a new pod's first drops, a new caller's first
+  # burst. increase() alone reports 0 for these.
+  - interval: 15s
+    input_series:
+      - series: 'hubble_drop_total{reason="POLICY_DENIED",source="ai-gateway/new-pod"}'
+        values: '_x20 3x20'
+      - series: 'agentgateway_requests_total{caller="system:serviceaccount:agents:new-caller",status="401"}'
+        values: '_x20 12x20'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: EgressPolicyDrop
+        exp_alerts:
+          - exp_labels: {severity: warning, source: "ai-gateway/new-pod"}
+            exp_annotations: {summary: "ai-gateway/new-pod tried 3 connection(s) a policy denies"}
+      - eval_time: 5m30s # within the burst window after the series appears
+        alertname: GatewayDenialBurst
+        exp_alerts:
+          - exp_labels: {severity: warning, caller: "system:serviceaccount:agents:new-caller", status: "401"}
+            exp_annotations: {summary: "12 x HTTP 401 for caller 'system:serviceaccount:agents:new-caller' in 1m"}
+      - eval_time: 9m
+        alertname: GatewayDenialBurst
+        exp_alerts: []
+
