@@ -64,8 +64,8 @@ spec:
   ports:
     - {name: http, port: 9093}
 ---
-# In: Prometheus (alerts) and Grafana (to show them), both in the lgtm pod. Out: nothing until a
-# receiver is configured in alertmanager.yml.
+# In: Prometheus (alerts) and Grafana (to show them), both in the lgtm pod. Out: DNS and the
+# webhook receiver (alertmanager.yml), nothing else.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -83,3 +83,17 @@ spec:
               app: lgtm
       ports:
         - port: 9093
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - {port: 53, protocol: UDP}
+        - {port: 53, protocol: TCP}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: alert-receiver
+      ports:
+        - port: 8080

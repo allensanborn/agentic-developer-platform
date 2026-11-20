@@ -1,11 +1,14 @@
-# Where firing alerts go (alertmanager.yaml). No receiver is wired yet: alerts are grouped and
-# shown in Grafana (Alertmanager data source) and on this API, and reach no one. Add a receiver
-# (Slack, a webhook, PagerDuty) here, and an egress rule for it in alertmanager.yaml.
+# Where firing alerts go (alertmanager.yaml): a generic webhook. alert-receiver.yaml logs each
+# alert as a JSON line; to deliver somewhere real (n8n, a ticketing hook), change the URL here and
+# the egress rule in alertmanager.yaml. Resolved alerts are sent too, so the receiver sees both.
 route:
-  receiver: none
+  receiver: webhook
   group_by: [alertname, caller, source]
   group_wait: 10s
   group_interval: 1m
   repeat_interval: 4h
 receivers:
-  - name: none
+  - name: webhook
+    webhook_configs:
+      - url: http://alert-receiver.telemetry.svc.cluster.local:8080/
+        send_resolved: true

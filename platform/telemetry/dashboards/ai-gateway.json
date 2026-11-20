@@ -1,0 +1,367 @@
+{
+ "uid": "adp-ai-gateway",
+ "title": "ADP: AI gateway",
+ "tags": [
+  "adp",
+  "gateway"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "time": {
+  "from": "now-1h",
+  "to": "now"
+ },
+ "refresh": "30s",
+ "panels": [
+  {
+   "id": 1,
+   "type": "timeseries",
+   "title": "Tokens per minute, by caller",
+   "description": "GatewayTokenVelocity fires above 20k/min for one caller.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (caller) (rate(agentgateway_gen_ai_client_token_usage_sum[5m])) * 60",
+     "legendFormat": "{{caller}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 2,
+   "type": "timeseries",
+   "title": "Model requests, by status",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (status) (rate(agentgateway_requests_total{listener=\"llm\"}[5m]))",
+     "legendFormat": "{{status}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 3,
+   "type": "timeseries",
+   "title": "Refusals, by caller and status",
+   "description": "A known identity asking for what it may not use; bursts fire GatewayDenialBurst.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 8,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (caller, status) (increase(agentgateway_requests_total{status=~\"401|403|429\"}[5m]))",
+     "legendFormat": "{{caller}} {{status}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 4,
+   "type": "timeseries",
+   "title": "Model latency p95, by model",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 8,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le, gen_ai_response_model) (rate(agentgateway_gen_ai_server_request_duration_bucket[5m])))",
+     "legendFormat": "{{gen_ai_response_model}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "Tool calls, by caller and tool",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 16,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (caller, resource) (rate(agentgateway_mcp_requests_total[5m]))",
+     "legendFormat": "{{caller}} {{resource}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "Policy-denied connections, by source pod",
+   "description": "Cilium drops (ADR 0014). Any of these fires EgressPolicyDrop.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 16,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (source) (increase(hubble_drop_total{reason=\"POLICY_DENIED\"}[5m]))",
+     "legendFormat": "{{source}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    }
+   }
+  },
+  {
+   "id": 7,
+   "type": "table",
+   "title": "Firing alerts",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 24,
+    "w": 24,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "ALERTS{alertstate=\"firing\"}",
+     "format": "table",
+     "instant": true
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "Value": true,
+       "__name__": true,
+       "alertstate": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "type": "logs",
+   "title": "Gateway access log (Loki)",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 30,
+    "w": 24,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "{service_name=\"ai-gateway\"}"
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "enableLogDetails": true,
+    "sortOrder": "Descending"
+   }
+  },
+  {
+   "id": 9,
+   "type": "table",
+   "title": "Recent research-agent traces (Tempo)",
+   "datasource": {
+    "type": "tempo",
+    "uid": "tempo"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 40,
+    "w": 24,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "tempo",
+      "uid": "tempo"
+     },
+     "queryType": "traceql",
+     "query": "{resource.service.name=\"research-agent\"}",
+     "limit": 20
+    }
+   ]
+  }
+ ],
+ "description": "Per-caller tokens and refusals, latency, tool calls, egress drops, alerts, the access log and traces (ADR 0016, 0017). Provisioned from platform/telemetry/dashboards/; edits in the UI are not kept."
+}

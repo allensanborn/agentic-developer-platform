@@ -2,7 +2,8 @@
 # Prometheus, Tempo, Loki and Grafana. Everything else speaks OTLP to its Collector, so the
 # production form (Grafana's Helm charts or Grafana Cloud, the same components) is a change of
 # endpoint, not of instrumentation. Upstream calls this image development, demo and testing
-# only: in-memory storage (emptyDir), one replica.
+# only. One replica; its state is on a PersistentVolumeClaim (lgtm-data), so history survives a
+# pod restart, but not `k3d cluster delete`.
 #
 # What reports here:
 #   - gateway: a span per model and tool call (gen_ai.*, jwt.sub) -> Tempo; an access-log
@@ -25,6 +26,8 @@ metadata:
   namespace: telemetry
 spec:
   replicas: 1
+  strategy:
+    type: Recreate # the volume is ReadWriteOnce: the old pod must let go before the new one starts
   selector:
     matchLabels:
       app: lgtm
@@ -52,6 +55,9 @@ spec:
             - {name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Viewer}
             - {name: GF_AUTH_DISABLE_LOGIN_FORM, value: "true"}
             - {name: GF_AUTH_BASIC_ENABLED, value: "false"}
+            # A week of metrics. ponytail: Tempo and Loki keep the image's own retention; set
+            # TEMPO_EXTRA_ARGS / LOKI_EXTRA_ARGS if the volume fills.
+            - {name: PROMETHEUS_EXTRA_ARGS, value: "--storage.tsdb.retention.time=7d --storage.tsdb.retention.size=4GB"}
           ports:
             - {name: otlp-grpc, containerPort: 4317}
             - {name: otlp-http, containerPort: 4318}
@@ -71,24 +77,22 @@ spec:
             capabilities:
               drop: [ALL]
           volumeMounts:
-            - {name: data, mountPath: /data}
+            - {name: state, mountPath: /data, subPath: data}
             - {name: tmp, mountPath: /tmp} # the launcher's readiness marker, components' scratch
             # Read-only root, non-root: the image writes only where something is mounted. Tempo
             # also keeps state in /var/tempo and Loki in /loki, outside /data (upstream runs as
             # root with a writable root, so its manifest does not need these).
-            - {name: tempo-state, mountPath: /var/tempo}
-            - {name: loki-state, mountPath: /loki}
+            - {name: state, mountPath: /var/tempo, subPath: tempo}
+            - {name: state, mountPath: /loki, subPath: loki}
             - {name: prometheus-config, mountPath: /otel-lgtm/prometheus.yaml, subPath: lgtm-prometheus.yaml}
             - {name: rules, mountPath: /otel-lgtm/rules}
             - {name: grafana-alertmanager, mountPath: /otel-lgtm/grafana/conf/provisioning/datasources/alertmanager.yaml, subPath: grafana-alertmanager.yaml}
+            - {name: grafana-dashboards, mountPath: /otel-lgtm/grafana/conf/provisioning/dashboards/adp.yaml, subPath: grafana-dashboards.yaml}
+            - {name: dashboards, mountPath: /otel-lgtm/dashboards/adp}
       volumes:
-        - name: data
-          emptyDir: {sizeLimit: 4Gi}
+        - name: state
+          persistentVolumeClaim: {claimName: lgtm-data}
         - name: tmp
-          emptyDir: {}
-        - name: tempo-state
-          emptyDir: {}
-        - name: loki-state
           emptyDir: {}
         - name: prometheus-config
           configMap: {name: lgtm-prometheus}
@@ -96,6 +100,21 @@ spec:
           configMap: {name: prometheus-rules}
         - name: grafana-alertmanager
           configMap: {name: grafana-alertmanager}
+        - name: grafana-dashboards
+          configMap: {name: grafana-dashboards}
+        - name: dashboards
+          configMap: {name: grafana-dashboard-json}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lgtm-data
+  namespace: telemetry
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
 ---
 apiVersion: v1
 kind: Service
