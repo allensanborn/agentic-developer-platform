@@ -54,7 +54,7 @@ Each has a beads issue. None is fully mitigated today.
 | Risk | Why it matters | Interim position |
 |---|---|---|
 | **Gateway listener is plain HTTP** | Bearer tokens and prompts cross the cluster network unencrypted; a node-level attacker can read and replay a token for up to an hour | Tokens are audience-bound and short-lived. Fix: TLS listener with cert-manager, or mesh mTLS |
-| **Telemetry is in memory, and nobody is paged** | Traces (Jaeger) and metrics (Prometheus) do not survive a pod restart; alerts fire but reach no one | Firing alerts are read from the Prometheus API; Alertmanager and durable storage are the next step (ADR 0016) |
+| **Telemetry is in memory, and nobody is paged** | Traces (Tempo), logs (Loki) and metrics (Prometheus) live in one pod's emptyDir and do not survive its restart; alerts reach Alertmanager, which has no receiver | Firing alerts are visible in Grafana and on Alertmanager's API (ADR 0017). Next: a receiver in `alertmanager.yml`, then the production form (durable backends) |
 | **Prompt injection is contained, not prevented** | The guard catches only the phrasings it lists; the structural defense (tool output to a tool-less step) holds only where an agent is written that way | Threat 19. A new tool with side effects needs the same framing and its own authorization before any agent gets it |
 | **No evaluation gate** | A model or prompt change behind an alias ships with no check that answers are still right | Aliases make the swap easy, which makes this more urgent |
 | **Signing keys are a snapshot** | If the cluster rotates its ServiceAccount signing key, all callers fail until `up.sh` is re-run | Fails closed |

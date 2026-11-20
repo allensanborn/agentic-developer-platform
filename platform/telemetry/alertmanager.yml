@@ -1,0 +1,11 @@
+# Where firing alerts go (alertmanager.yaml). No receiver is wired yet: alerts are grouped and
+# shown in Grafana (Alertmanager data source) and on this API, and reach no one. Add a receiver
+# (Slack, a webhook, PagerDuty) here, and an egress rule for it in alertmanager.yaml.
+route:
+  receiver: none
+  group_by: [alertname, caller, source]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+receivers:
+  - name: none

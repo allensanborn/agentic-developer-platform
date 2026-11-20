@@ -2,7 +2,7 @@
 # Shaped by GTIG/Mandiant's Layer 5 (Nov 2026): agentic intrusions arrive as valid identities
 # moving at machine speed (ARTEX: 27 events in 23 s), so watch velocity and denials per
 # identity, and treat a blocked egress attempt as a signal even when nothing got through.
-# `caller` is the gateway's jwt.sub (frontend.metrics in platform/telemetry/jaeger.yaml);
+# `caller` is the gateway's jwt.sub (frontend.metrics in platform/telemetry/lgtm.yaml);
 # unauthenticated requests have none. Tested offline: alerts_test.yml (dagger call check).
 groups:
   - name: gateway

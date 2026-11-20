@@ -23,7 +23,7 @@ entries:
     - kind: file
       path: platform/agents/research-agent.yaml
       line: 59
-      sha256: 35fed739d8c10bdf0696de36c126b38af11f7eb66549134cf1bfbac73d477f8e
+      sha256: 9d68360a82a41c4d79c8266901185573e8488a15e5307494d93b488f4e937c0d
   - party: erp-agent
     role: presents
     value: ai-gateway
@@ -324,8 +324,8 @@ entries:
     records:
     - kind: file
       path: scripts/up.sh
-      line: 68
-      sha256: d38358608fd65134cc8c57c2c640be8c78f04934b9953b149e2d3c28bf123c1d
+      line: 72
+      sha256: 77cbdfa383db1481dfcdc46fc9c25edc4ec2e4d5fba9a72caf8d160811492875
   - party: secrets
     role: consumes
     value: adp/providers/openrouter
@@ -346,7 +346,7 @@ entries:
     - kind: file
       path: platform/gateway/networkpolicy.yaml
       line: 18
-      sha256: 32e92e2fa62de5625aa429a17fa5b7d057f8d2380eef30bc9202593eab28b59d
+      sha256: b53cf755f50717d316da2681d44341fb6d92dad7de38da2498cbf3cb6bb8cb3e
   - party: platform
     role: presents
     value: adp.dev/ai-gateway-client
@@ -387,7 +387,7 @@ entries:
     - kind: file
       path: platform/agents/research-agent.yaml
       line: 1
-      sha256: 35fed739d8c10bdf0696de36c126b38af11f7eb66549134cf1bfbac73d477f8e
+      sha256: 9d68360a82a41c4d79c8266901185573e8488a15e5307494d93b488f4e937c0d
   - party: erp-agent
     role: denies
     value: openrouter-apikey

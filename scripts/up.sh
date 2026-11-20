@@ -43,6 +43,10 @@ docker build -q -t adp/research-agent:dev agent
 k3d image import -c "$CLUSTER" adp/research-agent:dev
 
 kubectl apply -f platform/namespaces.yaml
+# ADR 0017 replaced Jaeger and a standalone Prometheus with the lgtm pod. `apply` does not
+# delete what the manifests stopped declaring, so a cluster created before it drops them here.
+kubectl delete -n telemetry deploy/jaeger svc/jaeger netpol/jaeger deploy/prometheus svc/prometheus \
+  netpol/prometheus ciliumnetworkpolicy/prometheus-scrape --ignore-not-found >/dev/null
 kubectl apply -k platform
 # Caller identity: the gateway verifies ServiceAccount tokens against the API server's
 # signing keys. ponytail: a snapshot, re-run after a signing-key rotation; a remote JWKS
