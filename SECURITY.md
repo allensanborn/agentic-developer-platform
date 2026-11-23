@@ -8,13 +8,9 @@ The security contact is the maintainer, Allen Sanborn ([@allensanborn](https://g
 
 ## What happens next
 
-| Step | Time from your report |
-|---|---|
-| Acknowledgement | within 7 days |
-| Assessment and a planned fix date | within 14 days |
-| Fix or documented mitigation | within 90 days |
+This is a single-maintainer project, so responses are best effort. The maintainer acknowledges a report when possible and gives no fixed time for a fix.
 
-The maintainer agrees a disclosure date with you and discloses earlier when a fix is ready. Confirmed vulnerabilities are published as [GitHub Security Advisories](https://github.com/allensanborn/agentic-developer-platform/security/advisories) on this repository, with credit to the reporter unless you decline it.
+One time is fixed: a reported vulnerability is disclosed publicly no later than 90 days after the report, whether or not a fix exists. Disclosure is earlier when a fix is ready, or on a date agreed with you. Confirmed vulnerabilities are published as [GitHub Security Advisories](https://github.com/allensanborn/agentic-developer-platform/security/advisories) on this repository, with credit to the reporter unless you decline it.
 
 ## Supported versions
 
@@ -35,8 +31,8 @@ The platform runs on a local k3d cluster. [docs/threat-model.md](docs/threat-mod
 
 `dagger call check` evaluates every pull request, and the merge is blocked on a violation.
 
-- **Dependencies (SCA).** Trivy scans the hash-locked Python requirements, the Go module and each built image for known vulnerabilities. A HIGH or CRITICAL finding that has a fix blocks the merge. One found on `main` after the fact is fixed within 14 days, and before any release. Renovate opens the update for a known-vulnerable version with no waiting period ([renovate.json5](renovate.json5)). A dependency must carry a license compatible with Apache-2.0.
-- **Static analysis (SAST).** shellcheck, hadolint, kubeconform and Trivy's misconfiguration scanner run on every pull request, and GitHub CodeQL scans the Python, the Go and the workflows. Any shellcheck, hadolint or kubeconform finding, a HIGH or CRITICAL misconfiguration, or a CodeQL alert of high severity or above blocks the merge. One found on `main` is fixed within 14 days.
+- **Dependencies (SCA).** Trivy scans the hash-locked Python requirements, the Go module and each built image for known vulnerabilities. A HIGH or CRITICAL finding that has a fix blocks the merge. One found on `main` after the fact is fixed within 90 days, and before any release. Renovate opens the update for a known-vulnerable version with no waiting period ([renovate.json5](renovate.json5)). A dependency must carry a license compatible with Apache-2.0.
+- **Static analysis (SAST).** shellcheck, hadolint, kubeconform and Trivy's misconfiguration scanner run on every pull request, and GitHub CodeQL scans the Python, the Go and the workflows. Any shellcheck, hadolint or kubeconform finding, a HIGH or CRITICAL misconfiguration, or a CodeQL alert of high severity or above blocks the merge. One found on `main` is fixed within 90 days.
 
 ## Findings that do not affect the project
 
