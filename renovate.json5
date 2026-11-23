@@ -18,6 +18,8 @@
   vulnerabilityAlerts: { minimumReleaseAge: null, schedule: [], labels: ["security"] },
   labels: ["dependencies"],
   prConcurrentLimit: 10,
+  // The dco check in ci.yml rejects a commit without a sign-off, Renovate's included.
+  commitBody: "Signed-off-by: {{{gitAuthor}}}",
 
   // Hash-locked requirements: regenerate the lock (and its hashes) from requirements.in.
   "pip-compile": { managerFilePatterns: ["/(^|/)requirements\\.txt$/"] },

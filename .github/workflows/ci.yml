@@ -19,3 +19,24 @@ jobs:
           version: 0.21.11
           verb: call
           args: check
+  # Every commit must carry a Developer Certificate of Origin sign-off (CONTRIBUTING.md).
+  dco:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Signed-off-by on every commit
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          fail=0
+          for c in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            git log -1 --format=%B "$c" | grep -Eq '^Signed-off-by: .+ <.+>$' ||
+              { echo "missing Signed-off-by: $(git log -1 --format='%h %s' "$c")"; fail=1; }
+          done
+          exit "$fail"
