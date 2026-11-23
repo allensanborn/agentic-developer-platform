@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"dagger/ci/internal/dagger"
 
@@ -89,7 +90,11 @@ func (m *Ci) Build(
 	// +defaultPath="/agent"
 	src *dagger.Directory,
 ) *dagger.Container {
-	return src.DockerBuild()
+	// UPGRADE_EPOCH busts the cache of package-upgrade layers once a day (erp/db/Dockerfile), so a
+	// scan sees today's security fixes, not the day the layer was first cached (adp-ehy).
+	return src.DockerBuild(dagger.DirectoryDockerBuildOpts{
+		BuildArgs: []dagger.BuildArg{{Name: "UPGRADE_EPOCH", Value: time.Now().UTC().Format("2006-01-02")}},
+	})
 }
 
 // Scan for committed secrets, misconfigured manifests, and known vulnerabilities in
