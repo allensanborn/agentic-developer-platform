@@ -78,9 +78,9 @@ The project has made no release, so every control that starts "when the project 
 | QA-06.03 Major changes update tests | Met | [CONTRIBUTING.md](../CONTRIBUTING.md), "What an acceptable contribution looks like". |
 | QA-07.01 Non-author approval before merge | **Gap** | The project has one maintainer, so no second person can approve. Every change still needs a pull request and passing checks. Closes when a second maintainer joins ([GOVERNANCE.md](../GOVERNANCE.md)). |
 | SA-03.02 Threat model | N/A | No release. [threat-model.md](threat-model.md) exists. |
-| VM-04.02 VEX for non-affecting vulnerabilities | Met | Policy in [SECURITY.md](../SECURITY.md). Nothing is suppressed today. |
+| VM-04.02 VEX for non-affecting vulnerabilities | Met | Policy in [SECURITY.md](../SECURITY.md). Five CodeQL `py/path-injection` alerts on `sandbox/runtime/main.py` are dismissed as false positives, with the reason recorded on each alert. |
 | VM-05.01 SCA remediation threshold | Met | [SECURITY.md](../SECURITY.md). |
 | VM-05.02 SCA violations fixed before release | Met | [SECURITY.md](../SECURITY.md). |
 | VM-05.03 Automated dependency evaluation blocks violations | Met | Trivy over dependencies and built images in the required `check` job. Renovate reads OSV alerts. |
 | VM-06.01 SAST remediation threshold | Met | [SECURITY.md](../SECURITY.md). |
-| VM-06.02 Automated SAST blocks violations | Met | shellcheck, hadolint, kubeconform and Trivy misconfiguration scanning in the required `check` job. |
+| VM-06.02 Automated SAST blocks violations | Met | shellcheck, hadolint, kubeconform and Trivy misconfiguration scanning in the required `check` job. CodeQL default setup scans the Python, the Go and the workflows, and ruleset `main` blocks a merge on a high-severity alert. |

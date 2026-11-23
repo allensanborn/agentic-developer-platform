@@ -226,3 +226,7 @@ Tracked in beads (`bd ready`). The security-relevant gaps are also in [docs/thre
 - Telemetry lives on one node, and alerts reach a webhook that logs them, not a person.
 - Images are pinned by digest but not signed.
 - Nothing here ran at production scale or against real AWS.
+
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) to propose a change and [SECURITY.md](SECURITY.md) to report a vulnerability. The project is licensed under [Apache-2.0](LICENSE). [docs/openssf-baseline.md](docs/openssf-baseline.md) records how it meets the OpenSSF Baseline.

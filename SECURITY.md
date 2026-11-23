@@ -36,8 +36,8 @@ The platform runs on a local k3d cluster. [docs/threat-model.md](docs/threat-mod
 `dagger call check` evaluates every pull request, and the merge is blocked on a violation.
 
 - **Dependencies (SCA).** Trivy scans the hash-locked Python requirements, the Go module and each built image for known vulnerabilities. A HIGH or CRITICAL finding that has a fix blocks the merge. One found on `main` after the fact is fixed within 14 days, and before any release. Renovate opens the update for a known-vulnerable version with no waiting period ([renovate.json5](renovate.json5)). A dependency must carry a license compatible with Apache-2.0.
-- **Static analysis (SAST).** shellcheck, hadolint, kubeconform and Trivy's misconfiguration scanner run on every pull request. Any shellcheck, hadolint or kubeconform finding, or a HIGH or CRITICAL misconfiguration, blocks the merge. One found on `main` is fixed within 14 days.
+- **Static analysis (SAST).** shellcheck, hadolint, kubeconform and Trivy's misconfiguration scanner run on every pull request, and GitHub CodeQL scans the Python, the Go and the workflows. Any shellcheck, hadolint or kubeconform finding, a HIGH or CRITICAL misconfiguration, or a CodeQL alert of high severity or above blocks the merge. One found on `main` is fixed within 14 days.
 
 ## Findings that do not affect the project
 
-A finding that is not exploitable here is suppressed in the repository, scoped to the file or package it applies to, with a written reason beside it. A suppression without a reason is not accepted in review. If the project makes a release, those statements ship with it as an OpenVEX document.
+A finding that is not exploitable here is suppressed in the repository, scoped to the file or package it applies to, with a written reason beside it. A CodeQL alert that is a false positive is dismissed in GitHub code scanning with the reason recorded on the alert. A suppression without a reason is not accepted in review. If the project makes a release, those statements ship with it as an OpenVEX document.
