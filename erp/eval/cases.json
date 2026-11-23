@@ -1,0 +1,994 @@
+[
+ {
+  "id": "total-401",
+  "rule": "invoice_total_mismatch",
+  "key": 401,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 401,
+     "total": 12.42,
+     "invoice_date": "2025-11-24"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40101,
+     "track_id": 1851,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40102,
+     "track_id": 757,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40103,
+     "track_id": 2580,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40104,
+     "track_id": 386,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40105,
+     "track_id": 1243,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40106,
+     "track_id": 372,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40107,
+     "track_id": 2439,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40108,
+     "track_id": 1856,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_invoice_total_from_lines",
+   "params": {}
+  }
+ },
+ {
+  "id": "price-402",
+  "rule": "invoice_total_mismatch",
+  "key": 402,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 402,
+     "total": 13.89,
+     "invoice_date": "2025-02-15"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40201,
+     "track_id": 3407,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40202,
+     "track_id": 244,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40203,
+     "track_id": 780,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40204,
+     "track_id": 2457,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40205,
+     "track_id": 3188,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40206,
+     "track_id": 1337,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40207,
+     "track_id": 2421,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40208,
+     "track_id": 2127,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40209,
+     "track_id": 2623,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40210,
+     "track_id": 2048,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40211,
+     "track_id": 2714,
+     "unit_price": 2.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 2.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_line_price_from_track",
+   "params": {
+    "invoice_line_id": 40211
+   }
+  }
+ },
+ {
+  "id": "quantity-403",
+  "rule": "invoice_total_mismatch",
+  "key": 403,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 403,
+     "total": 10.92,
+     "invoice_date": "2025-02-01"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40301,
+     "track_id": 2900,
+     "unit_price": 0.99,
+     "quantity": 2,
+     "track_unit_price": 0.99,
+     "line_total": 1.98
+    },
+    {
+     "invoice_line_id": 40302,
+     "track_id": 1292,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40303,
+     "track_id": 2101,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40304,
+     "track_id": 122,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40305,
+     "track_id": 2307,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40306,
+     "track_id": 1641,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40307,
+     "track_id": 3468,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40308,
+     "track_id": 1584,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_line_quantity",
+   "params": {
+    "invoice_line_id": 40301,
+    "quantity": 1
+   }
+  }
+ },
+ {
+  "id": "total-404",
+  "rule": "invoice_total_mismatch",
+  "key": 404,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 404,
+     "total": 8.93,
+     "invoice_date": "2025-11-07"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40401,
+     "track_id": 1926,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40402,
+     "track_id": 2904,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40403,
+     "track_id": 1720,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40404,
+     "track_id": 2320,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_invoice_total_from_lines",
+   "params": {}
+  }
+ },
+ {
+  "id": "price-405",
+  "rule": "invoice_total_mismatch",
+  "key": 405,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 405,
+     "total": 8.93,
+     "invoice_date": "2025-08-06"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40501,
+     "track_id": 1275,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40502,
+     "track_id": 63,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40503,
+     "track_id": 3105,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40504,
+     "track_id": 552,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40505,
+     "track_id": 2896,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40506,
+     "track_id": 45,
+     "unit_price": 1.49,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 1.49
+    },
+    {
+     "invoice_line_id": 40507,
+     "track_id": 1905,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_line_price_from_track",
+   "params": {
+    "invoice_line_id": 40506
+   }
+  }
+ },
+ {
+  "id": "quantity-406",
+  "rule": "invoice_total_mismatch",
+  "key": 406,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 406,
+     "total": 7.95,
+     "invoice_date": "2025-04-01"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40601,
+     "track_id": 2085,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40602,
+     "track_id": 2998,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40603,
+     "track_id": 1718,
+     "unit_price": 0.99,
+     "quantity": 10,
+     "track_unit_price": 0.99,
+     "line_total": 9.9
+    },
+    {
+     "invoice_line_id": 40604,
+     "track_id": 478,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40605,
+     "track_id": 1724,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_line_quantity",
+   "params": {
+    "invoice_line_id": 40603,
+    "quantity": 1
+   }
+  }
+ },
+ {
+  "id": "total-407",
+  "rule": "invoice_total_mismatch",
+  "key": 407,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 407,
+     "total": 8.92,
+     "invoice_date": "2025-01-25"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40701,
+     "track_id": 864,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40702,
+     "track_id": 1615,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40703,
+     "track_id": 173,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40704,
+     "track_id": 874,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40705,
+     "track_id": 1058,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_invoice_total_from_lines",
+   "params": {}
+  }
+ },
+ {
+  "id": "price-408",
+  "rule": "invoice_total_mismatch",
+  "key": 408,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 408,
+     "total": 8.94,
+     "invoice_date": "2025-10-16"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40801,
+     "track_id": 301,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40802,
+     "track_id": 370,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40803,
+     "track_id": 2387,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40804,
+     "track_id": 64,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40805,
+     "track_id": 1523,
+     "unit_price": 2.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 2.99
+    },
+    {
+     "invoice_line_id": 40806,
+     "track_id": 522,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_line_price_from_track",
+   "params": {
+    "invoice_line_id": 40805
+   }
+  }
+ },
+ {
+  "id": "quantity-409",
+  "rule": "invoice_total_mismatch",
+  "key": 409,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 409,
+     "total": 8.92,
+     "invoice_date": "2025-01-04"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 40901,
+     "track_id": 2570,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40902,
+     "track_id": 1274,
+     "unit_price": 0.99,
+     "quantity": 2,
+     "track_unit_price": 0.99,
+     "line_total": 1.98
+    },
+    {
+     "invoice_line_id": 40903,
+     "track_id": 3350,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40904,
+     "track_id": 2972,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40905,
+     "track_id": 650,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40906,
+     "track_id": 2814,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 40907,
+     "track_id": 1977,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 40908,
+     "track_id": 1727,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_line_quantity",
+   "params": {
+    "invoice_line_id": 40902,
+    "quantity": 1
+   }
+  }
+ },
+ {
+  "id": "total-410",
+  "rule": "invoice_total_mismatch",
+  "key": 410,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 410,
+     "total": 17.91,
+     "invoice_date": "2025-12-01"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 41001,
+     "track_id": 977,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41002,
+     "track_id": 1053,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41003,
+     "track_id": 3374,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41004,
+     "track_id": 1202,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41005,
+     "track_id": 2951,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41006,
+     "track_id": 518,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41007,
+     "track_id": 1964,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41008,
+     "track_id": 1148,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41009,
+     "track_id": 836,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_invoice_total_from_lines",
+   "params": {}
+  }
+ },
+ {
+  "id": "price-411",
+  "rule": "invoice_total_mismatch",
+  "key": 411,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 411,
+     "total": 8.94,
+     "invoice_date": "2025-08-11"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 41101,
+     "track_id": 1826,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41102,
+     "track_id": 248,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41103,
+     "track_id": 722,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41104,
+     "track_id": 1511,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41105,
+     "track_id": 378,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41106,
+     "track_id": 567,
+     "unit_price": 2.49,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 2.49
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_line_price_from_track",
+   "params": {
+    "invoice_line_id": 41106
+   }
+  }
+ },
+ {
+  "id": "quantity-412",
+  "rule": "invoice_total_mismatch",
+  "key": 412,
+  "context": {
+   "invoice": [
+    {
+     "invoice_id": 412,
+     "total": 16.87,
+     "invoice_date": "2025-06-12"
+    }
+   ],
+   "lines": [
+    {
+     "invoice_line_id": 41201,
+     "track_id": 2417,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41202,
+     "track_id": 74,
+     "unit_price": 0.99,
+     "quantity": 10,
+     "track_unit_price": 0.99,
+     "line_total": 9.9
+    },
+    {
+     "invoice_line_id": 41203,
+     "track_id": 1465,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41204,
+     "track_id": 138,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41205,
+     "track_id": 2451,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41206,
+     "track_id": 1976,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41207,
+     "track_id": 2993,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41208,
+     "track_id": 1307,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41209,
+     "track_id": 297,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41210,
+     "track_id": 1856,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41211,
+     "track_id": 3019,
+     "unit_price": 1.99,
+     "quantity": 1,
+     "track_unit_price": 1.99,
+     "line_total": 1.99
+    },
+    {
+     "invoice_line_id": 41212,
+     "track_id": 3020,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    },
+    {
+     "invoice_line_id": 41213,
+     "track_id": 3250,
+     "unit_price": 0.99,
+     "quantity": 1,
+     "track_unit_price": 0.99,
+     "line_total": 0.99
+    }
+   ]
+  },
+  "expect": {
+   "kind": "fix",
+   "fix_type": "set_line_quantity",
+   "params": {
+    "invoice_line_id": 41202,
+    "quantity": 1
+   }
+  }
+ }
+]
