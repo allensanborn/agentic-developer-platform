@@ -60,6 +60,8 @@ host_ip=$(docker exec "k3d-$CLUSTER-server-0" nslookup host.docker.internal 2>/d
   awk '/^Name:/ {found = 1} found && /^Address/ {print $2; exit}')
 if [ -n "$host_ip" ]; then
   sed "s|__HOST_IP__|$host_ip|" platform/gateway/host-model-egress.yaml | kubectl apply -f -
+  # Report, not fail: without it `smart` falls through to the cluster's slower model.
+  scripts/host-model.sh status >&2 || echo "  (start it with scripts/host-model.sh up)" >&2
 else
   echo "host.docker.internal does not resolve in the cluster; no host model" >&2
 fi
