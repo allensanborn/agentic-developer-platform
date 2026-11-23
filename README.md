@@ -5,7 +5,7 @@
 Three facts back that up:
 
 - **Every control names its proof.** Each row in the tables below names the check that fails if the control breaks. The repo's rule is that every deny check keeps an allow check beside it, so a broken test cannot pass as a working fence.
-- **It is built for a security review.** [docs/threat-model.md](docs/threat-model.md) lists 22 threats with the control and the check for each, and the risks that are still open. The 19 decision records in [docs/adr/](docs/adr/) give the reason for each choice.
+- **It is built for a security review.** [docs/threat-model.md](docs/threat-model.md) lists 22 threats with the control and the check for each, and the risks that are still open. The 19 accepted decision records in [docs/adr/](docs/adr/) give the reason for each choice; ADRs 0020 to 0023 are proposals from the [extension plan](docs/plans/2026-11-extension-plan.md).
 - **It moves to real AWS by removing things.** [floci](https://floci.io/) stands in for Secrets Manager and DynamoDB. Comments in the manifests mark each endpoint override and dummy credential that an IAM role replaces.
 
 ## Why this is useful
