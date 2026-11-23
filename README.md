@@ -16,41 +16,15 @@ This platform takes those decisions away from the agent. Onboarding an agent is 
 
 ## How it fits together
 
-```mermaid
-flowchart LR
-  P(["OpenRouter<br/>hosted models"])
-  subgraph cluster["k3d cluster adp: Cilium, default-deny network"]
-    subgraph agents["ns agents"]
-      A["research-agent<br/>Dapr Workflow"]
-    end
-    subgraph gw["ns ai-gateway"]
-      G["agentgateway<br/>identity, allow-list, budget,<br/>prompt guard, routing"]
-    end
-    subgraph models["ns models"]
-      O["Ollama<br/>llama3.2 1B and 3B"]
-    end
-    subgraph optin["opt-in stages"]
-      M["orders MCP server"]
-      B["code broker"]
-      SB["gVisor sandbox<br/>no network"]
-      B --> SB
-    end
-    subgraph aws["ns aws: floci"]
-      SM[("Secrets Manager")]
-      DDB[("DynamoDB")]
-    end
-    T["ns telemetry<br/>Tempo, Loki, Prometheus, Grafana"]
-  end
-  A -->|"ServiceAccount token<br/>model: fast or smart"| G
-  G -->|"fast, and the fallback for smart"| O
-  G -->|"smart, key attached"| P
-  G -->|"MCP, policy per tool"| M
-  G -->|"MCP, policy per tool"| B
-  SM -->|"External Secrets"| G
-  A -->|"workflow state"| DDB
-  G -.->|"traces and logs"| T
-  A -.->|"traces"| T
-```
+The platform has two kinds of user and two outside dependencies.
+
+![System context: the agent team and the platform team use the platform, which depends on a hosted model provider and on AWS](docs/architecture/exports/structurizr-Context.svg)
+
+Inside, every call from an agent goes through the gateway.
+
+![Containers: the agent calls the AI gateway, which routes to local models, the hosted provider, the orders tools, and the code broker](docs/architecture/exports/structurizr-Containers.svg)
+
+Both diagrams are C4 views generated from one model, [docs/architecture/workspace.dsl](docs/architecture/workspace.dsl).
 
 One model call passes five decisions before any model sees it. The agent makes none of them.
 
