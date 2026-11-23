@@ -1,29 +1,72 @@
 # Agentic developer platform
 
-A local Kubernetes platform for running AI agents under the controls a production security review asks for. Agents hold no model credentials. One gateway authenticates every call, decides which models each agent may use, attaches provider keys, routes between hosted and small local models, and enforces a token budget per agent.
+> **Bottom line.** AI agents here hold no model credentials and have one way out of their namespace: a gateway that knows which workload is calling. The gateway decides which models and tools each agent may use, attaches the provider key, enforces a token budget per agent, and falls back to a local model when the provider fails. The whole platform runs on one laptop, and 86 scripted checks try to break its controls.
+
+Three facts back that up:
+
+- **Every control names its proof.** Each row in the tables below names the check that fails if the control breaks. The repo's rule is that every deny check keeps an allow check beside it, so a broken test cannot pass as a working fence.
+- **It is built for a security review.** [docs/threat-model.md](docs/threat-model.md) lists 22 threats with the control and the check for each, and the risks that are still open. The 19 decision records in [docs/adr/](docs/adr/) give the reason for each choice.
+- **It moves to real AWS by removing things.** [floci](https://floci.io/) stands in for Secrets Manager and DynamoDB. Comments in the manifests mark each endpoint override and dummy credential that an IAM role replaces.
+
+## Why this is useful
+
+A team that ships an agent usually gives it a provider API key and open egress. A hijacked prompt can then spend the key, leak the key, or send data anywhere.
+
+This platform takes those decisions away from the agent. Onboarding an agent is a ServiceAccount and an allow-list entry. The agent asks for a capability (`fast` or `smart`), not for a model, so the platform team can change the model or the provider in one reviewed file with no agent change.
+
+## How it fits together
 
 ```mermaid
 flowchart LR
-  subgraph agents["ns agents (default-deny network)"]
-    A["research-agent<br/>+ Dapr sidecar"]
+  P(["OpenRouter<br/>hosted models"])
+  subgraph cluster["k3d cluster adp: Cilium, default-deny network"]
+    subgraph agents["ns agents"]
+      A["research-agent<br/>Dapr Workflow"]
+    end
+    subgraph gw["ns ai-gateway"]
+      G["agentgateway<br/>identity, allow-list, budget,<br/>prompt guard, routing"]
+    end
+    subgraph models["ns models"]
+      O["Ollama<br/>llama3.2 1B and 3B"]
+    end
+    subgraph optin["opt-in stages"]
+      M["orders MCP server"]
+      B["code broker"]
+      SB["gVisor sandbox<br/>no network"]
+      B --> SB
+    end
+    subgraph aws["ns aws: floci"]
+      SM[("Secrets Manager")]
+      DDB[("DynamoDB")]
+    end
+    T["ns telemetry<br/>Tempo, Loki, Prometheus, Grafana"]
   end
-  subgraph gw["ns ai-gateway"]
-    G["agentgateway<br/>identity · access · budget · routing"]
-    S[("provider key<br/>Secret")]
-  end
-  subgraph models["ns models"]
-    O["Ollama<br/>llama3.2 1B / 3B"]
-  end
-  subgraph aws["ns aws (floci)"]
-    SM[("Secrets Manager")]
-    DDB[("DynamoDB")]
-  end
-  A -- "ServiceAccount token<br/>model: fast | smart" --> G
-  G -- "fast, and smart's fallback" --> O
-  G -- "smart, key attached" --> P["OpenRouter"]
-  SM -- "External Secrets" --> S
-  S -.-> G
-  A -- "workflow state (Dapr)" --> DDB
+  A -->|"ServiceAccount token<br/>model: fast or smart"| G
+  G -->|"fast, and the fallback for smart"| O
+  G -->|"smart, key attached"| P
+  G -->|"MCP, policy per tool"| M
+  G -->|"MCP, policy per tool"| B
+  SM -->|"External Secrets"| G
+  A -->|"workflow state"| DDB
+  G -.->|"traces and logs"| T
+  A -.->|"traces"| T
+```
+
+One model call passes five decisions before any model sees it. The agent makes none of them.
+
+```mermaid
+sequenceDiagram
+  participant A as Agent
+  participant G as Gateway
+  participant M as Model
+  A->>G: chat request, model "smart", ServiceAccount token
+  G->>G: verify the token against the cluster's signing keys
+  G->>G: is this identity on the allow-list for "smart"?
+  G->>G: is this identity inside its token budget?
+  G->>G: does the prompt trip the prompt guard?
+  G->>M: resolve "smart" to a concrete model, attach the provider key
+  M-->>G: reply, or an error that triggers the local fallback
+  G-->>A: reply, plus one trace span with caller, tokens, and model
 ```
 
 ## What it does
@@ -49,7 +92,7 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 
 ```sh
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
-scripts/smoke.sh                    # 21 end-to-end security checks (one skips without a host model)
+scripts/smoke.sh                    # 38 end-to-end security checks (one skips without a host model)
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
 dagger call check                   # lint, unit tests, boundary register, harness lock, Renovate config, secret/misconfig/vulnerability scans
 dagger call renovate --token=cmd://"gh auth token"   # what Renovate would bump (no PRs; ADR 0012)
@@ -110,7 +153,7 @@ scripts/sandbox-smoke.sh  # 15 checks
 
 gVisor's isolation is weaker than a microVM's: the untrusted code talks to a kernel written in Go in userspace, and a Linux kernel escape from gVisor lands on the node.
 
-## ERP discrepancy agent (branch `erp-discrepancy-agent`)
+## ERP discrepancy agent
 
 A tenant of the platform: it finds business data that breaks a rule, has a model propose a typed fix, and applies the fix only after a named person approves that exact proposal. Terms are defined in [CONTEXT.md](CONTEXT.md); decisions are ADRs 0005 to 0011.
 
@@ -134,7 +177,7 @@ flowchart LR
 ```bash
 scripts/up.sh         # the platform
 scripts/erp-up.sh     # this tenant
-scripts/erp-smoke.sh  # the mechanics, with a scripted model; ERP_SMOKE_ALIAS=smart for a real one
+scripts/erp-smoke.sh  # 13 checks of the mechanics, with a scripted model; ERP_SMOKE_ALIAS=smart for a real one
 ```
 
 Built so far: the three workloads, access policies, typed fixes enforced by database roles, approval bound to a proposal hash, deadlines with escalation, and the LangGraph diagnosis graph (gather facts, model chooses a declared fix, validate).
@@ -175,4 +218,11 @@ Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate
 
 ## Known gaps
 
-Tracked in beads (`bd ready`); the security-relevant ones are also in `docs/threat-model.md`. The largest: traffic to the gateway is plain HTTP inside the cluster, there is no tracing or eval gate yet, the tool (MCP) hop is not built, and the hosted-provider path has only been exercised with a placeholder key.
+Tracked in beads (`bd ready`). The security-relevant gaps are also in [docs/threat-model.md](docs/threat-model.md), under Open risks. The largest:
+
+- Traffic to the gateway is plain HTTP inside the cluster.
+- No eval gate checks a model or prompt change behind an alias.
+- The hosted-provider path has run only with a placeholder key.
+- Telemetry lives on one node, and alerts reach a webhook that logs them, not a person.
+- Images are pinned by digest but not signed.
+- Nothing here ran at production scale or against real AWS.
