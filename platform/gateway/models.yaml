@@ -61,9 +61,11 @@ spec:
       - field: model
         expression: '"llama3.2:3b"'
 ---
-# --- Internal: the same 3B model on the host's Ollama (Metal/GPU), for development. The
-# in-cluster copy runs on CPU at well under a token per second (adp-bd9). Reached at
-# host.docker.internal (OrbStack: 0.250.250.254); the NetworkPolicy allows that address only.
+# --- Internal: Llama 3.2 3B on the host's Ollama (Metal GPU), for development (ADR 0018). Fast
+# where the in-cluster CPU copy is not (adp-bd9). scripts/host-model.sh runs it bound to
+# loopback with a pinned model (versions.env HOST_MODEL); the cluster reaches it at
+# host.docker.internal (OrbStack forwards to the host's loopback), and the NetworkPolicy allows
+# that address only.
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayModel
 metadata:

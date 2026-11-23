@@ -60,7 +60,7 @@ k3d cluster delete adp              # tear down
 
 Observability (ADR 0017): `kubectl port-forward -n telemetry svc/lgtm 3000`, then http://localhost:3000. That is Grafana over Tempo (traces), Loki (the gateway's access log), Prometheus (metrics and alert rules) and Alertmanager, read-only, with no login. `app.py ask` and `app.py order` print the run's `trace_id`; search it in Tempo, or in Loki with `{service_name="ai-gateway"} | trace_id="<id>"`. Nothing in the cluster can reach the query ports. The "ADP: AI gateway" dashboard is in the ADP folder. History is on a PersistentVolumeClaim and survives a pod restart, not a cluster delete; alerts are delivered to `alert-receiver` (`kubectl logs -n telemetry deploy/alert-receiver`).
 
-Without a provider key, `smart` is served by a local model: the host's Ollama when it is running (`ollama pull llama3.2:3b && ollama serve`; the cluster reaches it at `host.docker.internal`), otherwise the in-cluster one, which on CPU is too slow for the ERP agent. Ask the agent something:
+Without a provider key, `smart` is served by a local model: the host's GPU model when it is running (`scripts/host-model.sh up`: Ollama under launchd, loopback only, `llama3.2:3b` pinned by digest, ADR 0018; the cluster reaches it at `host.docker.internal`), otherwise the in-cluster one, which on CPU is too slow for the ERP agent. Ask the agent something:
 
 ```sh
 kubectl exec -n agents deploy/research-agent -c agent -- python app.py ask "Why is the sky blue?"

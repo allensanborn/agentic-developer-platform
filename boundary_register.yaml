@@ -52,19 +52,19 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 32
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
       line: 58
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 86
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 88
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 119
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 121
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: tools/deploy/gateway-mcp.yaml
       line: 60
@@ -93,23 +93,23 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 33
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
       line: 59
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 87
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 89
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 120
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 122
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 206
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 208
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
 - id: principal-intern
   kind: principal
   relation: equal
@@ -130,7 +130,7 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 34
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
 - id: principal-namespace-agents
   kind: principal
   relation: equal
@@ -155,23 +155,23 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 32
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
       line: 34
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
       line: 58
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 86
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 88
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 119
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 121
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: tools/deploy/gateway-mcp.yaml
       line: 60
@@ -200,23 +200,23 @@ entries:
     - kind: file
       path: platform/gateway/models.yaml
       line: 33
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
       line: 59
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 87
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 89
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 120
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 122
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
     - kind: file
       path: platform/gateway/models.yaml
-      line: 206
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 208
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
 - id: alias-fast
   kind: name
   relation: equal
@@ -228,8 +228,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 139
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 141
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
   - party: research-agent
     role: consumes
     value: fast
@@ -249,8 +249,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 164
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 166
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
   - party: research-agent
     role: consumes
     value: smart
@@ -282,8 +282,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 212
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 214
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
   - party: erp-smoke
     role: consumes
     value: scripted
@@ -311,8 +311,8 @@ entries:
     records:
     - kind: file
       path: platform/gateway/models.yaml
-      line: 123
-      sha256: 96e3f802ad8eb8d9109f01e4b16bb0bff73cbd9dcc566e5f18da37a08ff7e3eb
+      line: 125
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
 - id: provider-key-remote-ref
   kind: secret
   relation: equal
@@ -324,8 +324,8 @@ entries:
     records:
     - kind: file
       path: scripts/up.sh
-      line: 72
-      sha256: 77cbdfa383db1481dfcdc46fc9c25edc4ec2e4d5fba9a72caf8d160811492875
+      line: 74
+      sha256: 55145581e82b5e1a9d410aef73fa6674ca01ea4af53331aa353ae1637ebfb06e
   - party: secrets
     role: consumes
     value: adp/providers/openrouter
@@ -645,3 +645,25 @@ entries:
       path: scripts/sandbox-smoke.sh
       line: 9
       sha256: 446a78b6a1c884097e23d0b089da0a3317e62d697037170ae1388ec41afa7e89
+- id: host-model-name
+  kind: name
+  relation: equal
+  description: The host GPU model (ADR 0018). scripts/host-model.sh pulls and pins what versions.env names; the gateway asks Ollama for what models.yaml names. A mismatch is a 404 from Ollama, which smart
+    silently fails over past.
+  sides:
+  - party: bootstrap
+    role: defines
+    value: llama3.2:3b
+    records:
+    - kind: file
+      path: versions.env
+      line: 20
+      sha256: 3e96439417074496824595a22d13eaa1c9b19981c56d0ae99a0eb60416ecf07b
+  - party: gateway
+    role: consumes
+    value: llama3.2:3b
+    records:
+    - kind: file
+      path: platform/gateway/models.yaml
+      line: 92
+      sha256: c6455da57c269cd478182806eb231096234aa99852e1908fe91e44524ad3687f
