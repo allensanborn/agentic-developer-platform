@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$ROOT"
 
 docker build -q -t adp/erp:dev erp/app
-docker build -q -t adp/chinook:dev erp/db
+docker build -q --build-arg "UPGRADE_EPOCH=$(date -u +%F)" -t adp/chinook:dev erp/db # adp-ehy
 k3d image import -c "$CLUSTER" adp/erp:dev adp/chinook:dev
 
 # Onboarding this tenant is two platform edits: reach the state store, and be allow-listed for models.

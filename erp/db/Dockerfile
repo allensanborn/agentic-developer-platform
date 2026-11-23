@@ -2,9 +2,12 @@
 # fix functions. Chinook is fetched at build time and pinned by checksum, not vendored.
 FROM postgres:17-alpine@sha256:e5d2edd28b1f8d40a0a6c0c9cdc545b19b56a0d5d88f94bc11a97d970d4700d0
 # Take the base image's pending security updates, and drop gosu: it only serves the
-# entrypoint's root-to-postgres step, and this image never runs as root.
+# entrypoint's root-to-postgres step, and this image never runs as root. UPGRADE_EPOCH is the
+# build date (dagger call check, erp-up.sh): a cached copy of this layer would otherwise keep the
+# packages of whatever day it was first built, and a scan would judge that day (adp-ehy).
+ARG UPGRADE_EPOCH=unset
 # hadolint ignore=DL3018
-RUN apk upgrade --no-cache && rm /usr/local/bin/gosu
+RUN echo "packages as of $UPGRADE_EPOCH" && apk upgrade --no-cache && rm /usr/local/bin/gosu
 # Fetched and verified in a RUN step: Dagger's Dockerfile build does not support ADD --checksum.
 RUN wget -q -O /docker-entrypoint-initdb.d/10-chinook.sql \
       https://github.com/lerocha/chinook-database/releases/download/v1.4.5/Chinook_PostgreSql.sql \
