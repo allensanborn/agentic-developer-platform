@@ -21,4 +21,4 @@ Coding agents execute configuration from the repository they open. Claude Code r
 
 - Any harness edit shows up in review as a `harness.lock` diff next to the change. This is a visibility control, not an enforcement one: without branch protection, CI is advisory, and someone with push rights can push past it.
 - `bd` can rewrite the managed block in `AGENTS.md`/`CLAUDE.md`. That turns the check red until someone relocks, which is intended: an automated rewrite of agent instructions is exactly the change this exists to surface.
-- This protects the repository's content. It does not protect a developer who clones a fork or an unrelated repo; that needs a client-side control (the managed setting `allowManagedHooksOnly`, or a per-clone pin).
+- This protects the repository's content. It does not protect a developer who clones a fork or an unrelated repo; that needs a client-side control (the managed setting `allowManagedHooksOnly`, or a per-clone pin of the harness files).
