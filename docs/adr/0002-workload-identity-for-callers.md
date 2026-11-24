@@ -12,7 +12,7 @@ Agents present a projected Kubernetes ServiceAccount token with audience `ai-gat
 
 ## Consequences
 
-- No caller secrets exist. The token lasts an hour, is rotated by the kubelet, and is useless against the Kubernetes API or any other audience.
+- No caller secrets exist. The token lasts 10 minutes (600 s, the minimum; an hour until 2026-11-24), is rotated by the kubelet, and is useless against the Kubernetes API or any other audience.
 - Clients must re-read the token file per request; `agent/app.py` does, and a unit test pins it.
 - Tools that only accept a static API key cannot call the gateway directly. They need a sidecar that injects the token, or a separate key-authenticated listener. Not built.
 - User identity is not carried. An agent acting for a person needs token exchange (RFC 8693) so its rights are the intersection of both. Not built.

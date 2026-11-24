@@ -15,7 +15,7 @@ entries:
     - kind: file
       path: platform/gateway/caller-identity.yaml
       line: 24
-      sha256: eacc7c3ef4453c82c7bb27ae92a7a16c8d3f23cd2daea24d51339d97f2636d91
+      sha256: 0ddd5efe54c15a02f7fe50cc8ce9a648d86c09690604dd8932d8118331b0fcaa
   - party: research-agent
     role: presents
     value: ai-gateway
@@ -23,7 +23,7 @@ entries:
     - kind: file
       path: platform/agents/research-agent.yaml
       line: 59
-      sha256: 9d68360a82a41c4d79c8266901185573e8488a15e5307494d93b488f4e937c0d
+      sha256: 3e1f6e8a1b3ccb02ed85a48b0bc1a5a4fc089d23a4b11439254650ce593e041f
   - party: erp-agent
     role: presents
     value: ai-gateway
@@ -31,7 +31,7 @@ entries:
     - kind: file
       path: erp/deploy/workloads.yaml
       line: 120
-      sha256: 6b858638b2878fc3c23e0b095f621bf48287e7cd96611ede4825f6f281dcb03e
+      sha256: 72b0e784c99fed31a95be12a091c00d1c34ca596cbf6d54b275e50da72da78f2
 - id: principal-research-agent
   kind: principal
   relation: equal
@@ -85,7 +85,7 @@ entries:
     - kind: file
       path: erp/deploy/workloads.yaml
       line: 60
-      sha256: 6b858638b2878fc3c23e0b095f621bf48287e7cd96611ede4825f6f281dcb03e
+      sha256: 72b0e784c99fed31a95be12a091c00d1c34ca596cbf6d54b275e50da72da78f2
   - party: gateway
     role: consumes
     value: erp-agent
@@ -192,7 +192,7 @@ entries:
     - kind: file
       path: erp/deploy/workloads.yaml
       line: 61
-      sha256: 6b858638b2878fc3c23e0b095f621bf48287e7cd96611ede4825f6f281dcb03e
+      sha256: 72b0e784c99fed31a95be12a091c00d1c34ca596cbf6d54b275e50da72da78f2
   - party: gateway
     role: consumes
     value: erp
@@ -400,7 +400,7 @@ entries:
     - kind: file
       path: platform/agents/research-agent.yaml
       line: 1
-      sha256: 9d68360a82a41c4d79c8266901185573e8488a15e5307494d93b488f4e937c0d
+      sha256: 3e1f6e8a1b3ccb02ed85a48b0bc1a5a4fc089d23a4b11439254650ce593e041f
   - party: erp-agent
     role: denies
     value: openrouter-apikey
@@ -408,7 +408,7 @@ entries:
     - kind: file
       path: erp/deploy/workloads.yaml
       line: 1
-      sha256: 6b858638b2878fc3c23e0b095f621bf48287e7cd96611ede4825f6f281dcb03e
+      sha256: 72b0e784c99fed31a95be12a091c00d1c34ca596cbf6d54b275e50da72da78f2
 - id: gateway-mcp-listener
   kind: name
   relation: equal

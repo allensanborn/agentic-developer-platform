@@ -112,13 +112,13 @@ spec:
               mountPath: /var/run/secrets/ai-gateway
               readOnly: true
       volumes:
-        # Its identity at the AI gateway: valid there only, for an hour, rotated by the kubelet.
+        # Its identity at the AI gateway: valid there only, for 10 minutes, rotated by the kubelet.
         - name: ai-gateway-token
           projected:
             sources:
               - serviceAccountToken:
                   audience: ai-gateway
-                  expirationSeconds: 3600
+                  expirationSeconds: 600 # the minimum: a copied token replays for 10 minutes
                   path: token
 ---
 apiVersion: v1

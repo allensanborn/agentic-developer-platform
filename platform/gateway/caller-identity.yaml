@@ -3,7 +3,7 @@
 # inline or from a URL, not from a ConfigMap.
 #
 # Callers present their Kubernetes ServiceAccount token (projected, audience `ai-gateway`,
-# an hour's life, rotated by the kubelet) as the bearer token. There is no shared key to
+# a 10-minute life, rotated by the kubelet) as the bearer token. There is no shared key to
 # leak or rotate, and the identity is the workload. Which aliases an identity may use is
 # decided per alias in models.yaml; with no matching Allow rule a request is denied.
 apiVersion: agentgateway.dev/v1alpha1
