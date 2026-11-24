@@ -304,7 +304,7 @@ entries:
     - kind: file
       path: scripts/erp-smoke.sh
       line: 15
-      sha256: 70eaa2d84761e080fa628afaee7edf62b994fc18c024731c67f46c90e5cef3e2
+      sha256: f4d373e511c9656e77ddf4d52bbc611e77de3917dc2e61d990765ddf04440960
 - id: provider-key-secret
   kind: secret
   relation: equal
