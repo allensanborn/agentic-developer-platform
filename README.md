@@ -66,7 +66,8 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 
 ```sh
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
-scripts/smoke.sh                    # 38 end-to-end security checks (one skips without a host model)
+scripts/smoke.sh                    # 44 end-to-end security checks (one skips without a host model)
+scripts/suspend.sh on agents/intern # cut one identity off: 403 at the gateway, no egress (ADR 0022); off to undo
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
 dagger call check                   # lint, unit tests, boundary register, harness lock, Renovate config, alert rules, eval self-check, secret/misconfig/vulnerability scans
 dagger call eval                    # the eval floor: 3B on CPU, about 25 minutes (CI runs it when erp/app, erp/eval or models.yaml change)

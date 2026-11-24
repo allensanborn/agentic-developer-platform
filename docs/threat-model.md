@@ -47,6 +47,7 @@ Scope: the platform as built, on one cluster. Method: STRIDE over the trust boun
 | 20 | Model-written code escapes its sandbox or exfiltrates | gVisor runtime with enforced seccomp; no network and no Kubernetes API from a claimed sandbox; `run_python` granted to `research-agent` only | sandbox-smoke: own kernel, seccomp enforced, no internet, no API (each beside a control that has them) |
 | 21 | A backend's error text tells a caller which server or provider sits behind an alias, and feeds an agent's trial-and-error | Backend 5xx, and JSON 401/403/429, get a fixed body; the gateway's own decisions pass through (`platform/gateway/errors.yaml`) | smoke: a backend error carries no detail; the prompt guard's refusal still says why |
 | 22 | A local process on the Mac uses, replaces or reads the host GPU model, whose API has no authentication | Bound to loopback only (verified unreachable on the LAN), two models pinned by manifest digest, development only (ADR 0018, 0024) | `scripts/host-model.sh status` fails beyond loopback or on another digest; `up.sh` reports it |
+| 23 | A misbehaving or hijacked agent keeps acting while someone works out what happened | `scripts/suspend.sh on <ns>/<sa>`: 403 at the gateway for that identity, then no egress from its pods; nothing is deleted (ADR 0022). A run caught mid-call fails | smoke: suspended `intern` gets 403 and its own pod reaches nothing, `research-agent` still works; `off` restores both |
 
 ## Open risks
 
