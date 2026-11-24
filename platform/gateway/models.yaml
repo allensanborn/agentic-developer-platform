@@ -32,6 +32,7 @@ spec:
           - 'jwt.sub == "system:serviceaccount:agents:research-agent"'
           - 'jwt.sub == "system:serviceaccount:erp:erp-agent"'
           - 'jwt.sub == "system:serviceaccount:agents:intern"'
+          - 'jwt.sub == "system:serviceaccount:probes:fence-probe"' # ADR 0021: fast and nothing else
     transformations:
       - field: model
         expression: '"llama3.2:1b"'

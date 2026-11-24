@@ -19,8 +19,12 @@ resources:
   - telemetry/lgtm.yaml
   - telemetry/alertmanager.yaml
   - telemetry/alert-receiver.yaml
+  - probes/fence-probe.yaml
 # Generated, so a rule or scrape change rolls Prometheus (the name carries a content hash).
 configMapGenerator:
+  - name: fence-probe
+    namespace: probes
+    files: [probes/fence-probe.sh]
   - name: lgtm-prometheus
     namespace: telemetry
     files: [telemetry/lgtm-prometheus.yaml]

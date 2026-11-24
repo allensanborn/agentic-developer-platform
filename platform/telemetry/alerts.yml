@@ -28,7 +28,8 @@ groups:
       - alert: GatewayCallerDenied
         # A known identity asked for something it is not allowed: a model, a tool. Rare in
         # normal operation, so any occurrence is worth a look.
-        expr: sum by (caller) (increase(agentgateway_requests_total{status="403"}[5m])) > 0
+        # The fence probe is refused on purpose every run; its own alerts cover it.
+        expr: sum by (caller) (increase(agentgateway_requests_total{status="403",caller!="system:serviceaccount:probes:fence-probe"}[5m])) > 0
         labels: {severity: info}
         annotations:
           summary: "{{ $labels.caller }} was refused {{ $value | humanize }} time(s) in 5m"
@@ -39,10 +40,30 @@ groups:
         # agent, that is an attempt to reach somewhere it was never meant to.
         # As above: a pod that is new, or new to being dropped, has no earlier sample, and its
         # first attempts are the ones that matter.
+        # The fence probe's pods are dropped on purpose every run; FenceProbeFailed covers them.
         expr: >-
-          sum by (source) (increase(hubble_drop_total{reason="POLICY_DENIED"}[5m])) > 0
-          or (sum by (source) (hubble_drop_total{reason="POLICY_DENIED"}) > 0
-              unless sum by (source) (hubble_drop_total{reason="POLICY_DENIED"} offset 5m))
+          sum by (source) (increase(hubble_drop_total{reason="POLICY_DENIED",source!~"probes/.*"}[5m])) > 0
+          or (sum by (source) (hubble_drop_total{reason="POLICY_DENIED",source!~"probes/.*"}) > 0
+              unless sum by (source) (hubble_drop_total{reason="POLICY_DENIED",source!~"probes/.*"} offset 5m))
         labels: {severity: warning}
         annotations:
           summary: "{{ $labels.source }} tried {{ $value | humanize }} connection(s) a policy denies"
+  - name: fences
+    rules:
+      # The fence probe (ADR 0021, platform/probes/) reports fence_probe_ok per fence every 5 min.
+      - alert: FenceProbeFailed
+        # A deny that let something through, or an allow that was refused: either way the fence
+        # is not what its check says.
+        expr: min by (fence) (fence_probe_ok) == 0
+        labels: {severity: critical}
+        annotations:
+          summary: "the {{ $labels.fence }} fence failed its probe"
+      - alert: FenceProbeStale
+        # No report for three intervals: the probe itself is broken, and so is the evidence.
+        expr: >-
+          absent_over_time(fence_probe_ok{fence="identity"}[15m])
+          or absent_over_time(fence_probe_ok{fence="entitlement"}[15m])
+          or absent_over_time(fence_probe_ok{fence="egress"}[15m])
+        labels: {severity: warning}
+        annotations:
+          summary: "the {{ $labels.fence }} fence has not been probed for 15 minutes"

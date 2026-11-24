@@ -73,3 +73,44 @@ tests:
         alertname: GatewayDenialBurst
         exp_alerts: []
 
+  # The fence probe (ADR 0021) reports every 5 minutes: entitlement fails once, egress stops
+  # reporting after 5m.
+  - interval: 5m
+    input_series:
+      - series: 'fence_probe_ok{fence="identity"}'
+        values: '1x8'
+      - series: 'fence_probe_ok{fence="entitlement"}'
+        values: '1 1 0 1x5'
+      - series: 'fence_probe_ok{fence="egress"}'
+        values: '1 1 _x6'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: FenceProbeFailed
+        exp_alerts:
+          - exp_labels: {severity: critical, fence: entitlement}
+            exp_annotations: {summary: "the entitlement fence failed its probe"}
+      - eval_time: 15m
+        alertname: FenceProbeFailed
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: FenceProbeStale
+        exp_alerts: []
+      - eval_time: 25m
+        alertname: FenceProbeStale
+        exp_alerts:
+          - exp_labels: {severity: warning, fence: egress}
+            exp_annotations: {summary: "the egress fence has not been probed for 15 minutes"}
+  # The probe's own refusals and drops are on purpose: neither general alert fires for them.
+  - interval: 15s
+    input_series:
+      - series: 'agentgateway_requests_total{caller="system:serviceaccount:probes:fence-probe",status="403"}'
+        values: '0+1x40'
+      - series: 'hubble_drop_total{reason="POLICY_DENIED",source="probes/fence-probe-29a"}'
+        values: '0+3x40'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: GatewayCallerDenied
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: EgressPolicyDrop
+        exp_alerts: []
