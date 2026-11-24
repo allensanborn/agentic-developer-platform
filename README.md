@@ -50,7 +50,7 @@ sequenceDiagram
 | Agents hold no model credential | Provider keys live in AWS Secrets Manager, are synced into the gateway's namespace only, and are attached by the gateway | `smoke.sh`: the key exists in one namespace |
 | Callers are identified without shared keys | Agents present their Kubernetes ServiceAccount token (audience `ai-gateway`, one hour, auto-rotated); the gateway verifies it against the cluster's signing keys | `smoke.sh`: no token and wrong-audience token get 401 |
 | Access is per identity, per model | Allow-lists on each model in `platform/gateway/models.yaml`; anything unlisted is denied | `smoke.sh`: `intern` gets 403 on `smart` |
-| Agents ask for a capability, not a model | Aliases `fast` and `smart`; the catalogue maps them to real models and providers | `smoke.sh`: `fast` is answered by `llama3.2:1b` |
+| Agents ask for a capability, not a model | Aliases `fast`, `smart` and `diagnose` (the ERP agent's); the catalogue maps them to real models and providers | `smoke.sh`: `fast` is answered by `llama3.2:1b` |
 | Provider failover | `smart` tries the hosted model, then the local 3B model when the provider is down, throttling or rejecting the key | `smoke.sh`: `smart` answers with the placeholder key |
 | Spend limit per agent | Token budget keyed on the caller's identity | Checked by hand: third call at a 30-token budget returned 429; another identity was unaffected |
 | The gateway cannot be bypassed | Default-deny NetworkPolicy: agents reach the gateway and nothing else; only the gateway reaches models | `smoke.sh`: three blocked paths |
@@ -151,12 +151,12 @@ flowchart LR
 ```bash
 scripts/up.sh         # the platform
 scripts/erp-up.sh     # this tenant
-scripts/erp-smoke.sh  # 13 checks of the mechanics, with a scripted model; ERP_SMOKE_ALIAS=smart for a real one
+scripts/erp-smoke.sh  # 13 checks of the mechanics, with a scripted model; ERP_SMOKE_ALIAS=diagnose for a real one
 ```
 
 Built so far: the three workloads, access policies, typed fixes enforced by database roles, approval bound to a proposal hash, deadlines with escalation, and the LangGraph diagnosis graph (gather facts, model chooses a declared fix, validate).
 
-A run against a real model needs the host's Ollama (see Run it) or a hosted provider key: the in-cluster CPU models generate under one token per second, so a diagnosis times out. With the host's `llama3.2:3b` (about 120 tokens per second on the development machine), `ERP_SMOKE_ALIAS=smart scripts/erp-smoke.sh` passes in under a minute. Without one, `scripts/erp-smoke.sh` still checks every mechanism: by default the agent diagnoses through the `scripted` alias, a model behind the gateway that gives one fixed answer (`platform/models/scripted.yaml`).
+A run against a real model needs the host's Ollama (see Run it) or a hosted provider key: the in-cluster CPU models generate under one token per second, so a diagnosis times out. The agent diagnoses through its own alias, `diagnose`: the hosted model, then the host's `llama3.1:8b` (ADR 0024), with no in-cluster fallback, because a 3B picks the wrong fix on most line-level errors. `ERP_SMOKE_ALIAS=diagnose scripts/erp-smoke.sh` runs the checks against it. Without one, `scripts/erp-smoke.sh` still checks every mechanism: by default the agent diagnoses through the `scripted` alias, a model behind the gateway that gives one fixed answer (`platform/models/scripted.yaml`).
 
 Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate.
 

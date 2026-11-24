@@ -4,7 +4,7 @@
 # but the executor can change the data.
 #
 # The agent diagnoses with the `scripted` alias by default: one fixed answer, so these
-# mechanics are checked without a real model (adp-ctc). ERP_SMOKE_ALIAS=smart runs the same
+# mechanics are checked without a real model (adp-ctc). ERP_SMOKE_ALIAS=diagnose runs the same
 # checks against a real model.
 set -uo pipefail
 # shellcheck source=scripts/env.sh
