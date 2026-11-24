@@ -1,6 +1,6 @@
 # 21. Fence probes run on a schedule, and a stale probe is an alert
 
-Status: proposed, 2026-11-23. Not built.
+Status: accepted, 2026-11-24. Built (`platform/probes/`).
 
 ## Context
 
@@ -26,3 +26,10 @@ OpenAI's reference architecture for supervised investigations (2026-11-09) runs 
 - The egress deny probe fires `EgressPolicyDrop` (ADR 0016) every interval. The rule must exclude the probe's pod, and the probe's own failure alert must cover what that exclusion hides.
 - An allow that fails is as loud as a deny that passes, so a broken probe cannot read as a working fence.
 - Proof: `promtool` tests for both rules, and a smoke check that deletes one NetworkPolicy and sees the probe go red within one interval, then restores it.
+
+## As built (2026-11-24)
+
+- `platform/probes/fence-probe.sh`, run every 5 minutes by a CronJob in the `probes` namespace as ServiceAccount `fence-probe`, allowed `fast` only. Eight checks: identity (no token 401, another audience 401, own token 200), entitlement (`fast` 200, `smart` 403), egress (in-cluster model, host model and internet all unreachable).
+- It reports `fence_probe_ok{fence}` as 1 or 0 over OTLP to otel-lgtm, rather than a last-pass timestamp: a pushed series goes absent when reports stop, so staleness is `absent_over_time` over 15 minutes, per fence.
+- Alerts: `FenceProbeFailed` (critical) on a 0, `FenceProbeStale` on no report. `EgressPolicyDrop` excludes `probes/*` pods and `GatewayCallerDenied` excludes the probe's identity, since both are on purpose. promtool tests cover all four, and removing an exclusion fails them.
+- `smoke.sh` runs the CronJob's job once instead of copying the checks. It then deletes the probe namespace's NetworkPolicies, sees the probe fail and `FenceProbeFailed` fire for egress, restores them, and sees the probe pass. This tests the probe's own namespace's fence, not the agents namespace's; `smoke.sh`'s existing checks still cover those from their own vantage point.

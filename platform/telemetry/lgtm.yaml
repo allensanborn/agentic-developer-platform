@@ -160,6 +160,12 @@ spec:
               kubernetes.io/metadata.name: agents
       ports:
         - port: 4318
+    - from: # the fence probe's report (ADR 0021)
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: probes
+      ports:
+        - port: 4318
 ---
 # Out: DNS, the two scrape targets and Alertmanager. A CiliumNetworkPolicy, because the Cilium
 # agents run on the host network (the host/remote-node entities, ADR 0014). No internet: the

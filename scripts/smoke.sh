@@ -17,7 +17,14 @@ probe() { # namespace, [serviceaccount]: a long-lived curl pod to exec into, adp
       "securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' >/dev/null
   kubectl wait -n "$1" "pod/adp-smoke${2:+-$2}" --for=condition=Ready --timeout=120s >/dev/null
 }
+probe_policies=""
+restore_probe_policies() { # the probe namespace's NetworkPolicies, as saved before a check removed them
+  [ -n "$probe_policies" ] || return 0
+  jq '.items[] |= del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields)' \
+    <<<"$probe_policies" | kubectl apply -f - >/dev/null && probe_policies=""
+}
 cleanup() {
+  restore_probe_policies
   for ns in agents default; do kubectl delete pod adp-smoke -n "$ns" --ignore-not-found >/dev/null 2>&1; done
   kubectl delete pod adp-smoke-gw -n ai-gateway --ignore-not-found >/dev/null 2>&1
   kubectl delete pod adp-smoke-intern -n agents --ignore-not-found >/dev/null 2>&1
@@ -261,6 +268,32 @@ delivered() { # alertname: yes once the webhook receiver has logged it (Alertman
   echo no
 }
 check "Alertmanager delivers it to the webhook receiver" yes "$(delivered GatewayDenialBurst)"
+
+echo "--- fence probes (ADR 0021)"
+# The CronJob's own probe, run once now: one copy of these checks, scheduled and on demand.
+probe_run() { # job name: pass or fail
+  kubectl delete job -n probes "$1" --ignore-not-found >/dev/null
+  kubectl create job -n probes "$1" --from=cronjob/fence-probe >/dev/null
+  for _ in $(seq 1 60); do # a Job reports both outcomes as counts; wait for either
+    case $(kubectl get job -n probes "$1" -o jsonpath='{.status.succeeded}/{.status.failed}') in
+      1/) echo pass; return ;;
+      /1) echo fail; return ;;
+    esac
+    sleep 3
+  done
+  echo timeout
+}
+check "the fence probe passes" pass "$(probe_run adp-smoke-probe)"
+check "it reports each fence as passing" "1 1 1" \
+  "$(for f in identity entitlement egress; do promq "fence_probe_ok{fence=\"$f\"}" | jq -r '.data.result[0].value[1] // "none"'; done | xargs)"
+# Open the probe's own network fence: its egress denies must now fail, and the alert fire.
+probe_policies=$(kubectl get networkpolicy -n probes -o json)
+kubectl delete networkpolicy -n probes --all >/dev/null
+check "with its network policies gone, the probe fails" fail "$(probe_run adp-smoke-probe-open)"
+check "and FenceProbeFailed fires for the egress fence" yes "$(firing FenceProbeFailed '.labels.fence == "egress"')"
+restore_probe_policies
+check "restored, the probe passes again" pass "$(probe_run adp-smoke-probe-restored)"
+kubectl delete job -n probes adp-smoke-probe adp-smoke-probe-open adp-smoke-probe-restored --ignore-not-found >/dev/null
 check "the AI gateway dashboard is provisioned, visible to an anonymous viewer" adp-ai-gateway \
   "$(curl -s -m 5 'localhost:13000/api/search?query=AI%20gateway' | jq -r '.[0].uid // empty')"
 # Each Prometheus panel this run's own traffic feeds must return data: a renamed metric or label

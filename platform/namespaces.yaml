@@ -31,3 +31,12 @@ metadata:
     # Grants network access to the AI gateway (platform/gateway/networkpolicy.yaml).
     # Reaching it is not enough to use it: every route also requires an allow-listed identity.
     adp.dev/ai-gateway-client: "true"
+---
+# Fence probes (ADR 0021): a tenant like agents, whose only job is to test the fences.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: probes
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    adp.dev/ai-gateway-client: "true"

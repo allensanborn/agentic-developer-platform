@@ -1,0 +1,110 @@
+# The fence probe (ADR 0021), a tenant like agents: its own identity, allowed `fast` and nothing
+# else (platform/gateway/models.yaml), under the same default-deny network policy.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fence-probe
+  namespace: probes
+automountServiceAccountToken: false
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: fence-probe
+  namespace: probes
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0 # a failure is a finding, not something to retry away
+      activeDeadlineSeconds: 240
+      template:
+        metadata:
+          labels:
+            app: fence-probe
+        spec:
+          serviceAccountName: fence-probe
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: probe
+              image: curlimages/curl:8.21.0@sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13
+              command: [/bin/sh, /probe/fence-probe.sh]
+              volumeMounts:
+                - {name: probe, mountPath: /probe, readOnly: true}
+                - {name: ai-gateway-token, mountPath: /var/run/secrets/ai-gateway, readOnly: true}
+                - {name: other-audience-token, mountPath: /var/run/secrets/other-audience, readOnly: true}
+              resources:
+                requests: {cpu: 10m, memory: 16Mi}
+                limits: {memory: 32Mi}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+          volumes:
+            - name: probe
+              configMap:
+                name: fence-probe
+            - name: ai-gateway-token
+              projected:
+                sources:
+                  - serviceAccountToken: {audience: ai-gateway, expirationSeconds: 600, path: token}
+            - name: other-audience-token # the identity fence's deny case: valid, wrong audience
+              projected:
+                sources:
+                  - serviceAccountToken: {audience: not-ai-gateway, expirationSeconds: 600, path: token}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: probes
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# What the agents namespace may reach, less what the probe has no use for (Dapr, AWS), plus the
+# OTLP port for its report.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: probe-egress
+  namespace: probes
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to: # DNS
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - {port: 53, protocol: UDP}
+        - {port: 53, protocol: TCP}
+    - to: # the AI gateway
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: ai-gateway
+      ports:
+        - port: 8080
+    - to: # its report
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: telemetry
+          podSelector:
+            matchLabels:
+              app: lgtm
+      ports:
+        - port: 4318
