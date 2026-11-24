@@ -21,12 +21,12 @@ The script prints what it changed and what is still running. It does not delete 
 ## Alternatives considered
 
 - **Delete the pod or scale to zero.** Loses in-memory work and, for a Deployment, the pod comes back.
-- **Revoke the token.** ServiceAccount tokens cannot be revoked individually; they expire within the hour.
+- **Revoke the token.** ServiceAccount tokens cannot be revoked individually; they expire within 10 minutes.
 - **Budget of zero.** Stops spending, not tool calls or egress.
 
 ## Consequences
 
-- A suspended identity's token stays valid for up to an hour and is useless at the gateway for that hour.
+- A suspended identity's token stays valid for up to 10 minutes and is useless at the gateway for that time.
 - Under GitOps (`adp-m3l`) the deny list is a file in Git, and a commit is too slow for an emergency. The script stays as a documented break-glass path, and the controller must be told to tolerate it until the matching commit lands.
 - Suspension is itself an event worth an alert, so that a forgotten suspension is visible.
 - Proof, in `smoke.sh`: suspend `intern`; `intern` gets 403 on `fast` and cannot reach the gateway's port, while `research-agent` still completes a workflow; resume; `intern` gets 200 on `fast`.
