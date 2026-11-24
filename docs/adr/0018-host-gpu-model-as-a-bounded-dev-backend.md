@@ -1,6 +1,6 @@
 # 18. The host's GPU model is a first-class development backend, with bounds
 
-Status: accepted, 2026-11-20. Built. Decided with a turtleneck review (full level); the record's flip conditions are below.
+Status: accepted, 2026-11-20. Built. Amended by ADR 0024: the host also serves `llama3.1:8b`, for ERP diagnosis only. Decided with a turtleneck review (full level); the record's flip conditions are below.
 
 ## Context
 
