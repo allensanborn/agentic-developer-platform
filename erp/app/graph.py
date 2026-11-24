@@ -16,7 +16,7 @@ from rules import RULES
 
 GATEWAY = os.environ.get("AI_GATEWAY_URL", "http://ai-gateway.ai-gateway.svc.cluster.local:8080")
 TOKEN_FILE = os.environ.get("AI_GATEWAY_TOKEN_FILE", "/var/run/secrets/ai-gateway/token")
-ALIAS = os.environ.get("DIAGNOSIS_ALIAS", "smart")
+ALIAS = os.environ.get("DIAGNOSIS_ALIAS", "diagnose")
 READ_BINDING = os.environ.get("READ_BINDING", "erp-read")
 MAX_ANSWERS = 2  # the model gets one chance to correct an answer that does not validate
 
