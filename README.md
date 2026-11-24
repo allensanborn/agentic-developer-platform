@@ -68,7 +68,9 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
 scripts/smoke.sh                    # 38 end-to-end security checks (one skips without a host model)
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
-dagger call check                   # lint, unit tests, boundary register, harness lock, Renovate config, secret/misconfig/vulnerability scans
+dagger call check                   # lint, unit tests, boundary register, harness lock, Renovate config, alert rules, eval self-check, secret/misconfig/vulnerability scans
+dagger call eval                    # the eval floor: 3B on CPU, about 25 minutes (CI runs it when erp/app, erp/eval or models.yaml change)
+dagger call eval --ollama tcp://localhost:11434 --model llama3.1:8b --min 0.65   # the eval bar on the host GPU, before a prompt or model change (ADR 0011)
 dagger call renovate --token=cmd://"gh auth token"   # what Renovate would bump (no PRs; ADR 0012)
 k3d cluster delete adp              # tear down
 ```
@@ -158,7 +160,9 @@ Built so far: the three workloads, access policies, typed fixes enforced by data
 
 A run against a real model needs the host's Ollama (see Run it) or a hosted provider key: the in-cluster CPU models generate under one token per second, so a diagnosis times out. With the host's `llama3.2:3b` (about 120 tokens per second on the development machine), `ERP_SMOKE_ALIAS=smart scripts/erp-smoke.sh` passes in under a minute. Without one, `scripts/erp-smoke.sh` still checks every mechanism: by default the agent diagnoses through the `scripted` alias, a model behind the gateway that gives one fixed answer (`platform/models/scripted.yaml`).
 
-Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate.
+Not built yet: the Drasi trigger and Keycloak-verified approvers.
+
+The eval gate (ADR 0011) scores which fix the graph picks on 12 seeded discrepancies. On the host GPU, `llama3.2:3b` picks the right fix in 4 of 12 and `llama3.1:8b` in 9 of 12. `dagger call check` holds the 3B to a floor that catches a broken prompt; the 8B bar is the local command under Run it.
 
 ## Layout
 
@@ -195,7 +199,7 @@ Not built yet: the Drasi trigger, Keycloak-verified approvers, and the eval gate
 Tracked in beads (`bd ready`). The security-relevant gaps are also in [docs/threat-model.md](docs/threat-model.md), under Open risks. The largest:
 
 - Traffic to the gateway is plain HTTP inside the cluster.
-- No eval gate checks a model or prompt change behind an alias.
+- The eval bar (8B, host GPU) is a manual step; CI enforces only the 3B floor.
 - The hosted-provider path has run only with a placeholder key.
 - Telemetry lives on one node, and alerts reach a webhook that logs them, not a person.
 - Images are pinned by digest but not signed.

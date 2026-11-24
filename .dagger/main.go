@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"dagger/ci/internal/dagger"
@@ -25,6 +26,8 @@ const (
 	pythonImage      = "python:3.13-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72"
 	prometheusImage  = "prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2"
 	renovateImage    = "renovate/renovate:44.216.2@sha256:435c302302f1db679e9b482f8dfd7e1e0c3b6938df44f9444780064c9a4d2c4f"
+	ollamaImage      = "ollama/ollama:0.40.16@sha256:910d0d8107b538fb0894e63163eb195de0cc7aefcbc666dc62d3b18f71124592"
+
 )
 
 type Ci struct{}
@@ -248,7 +251,67 @@ func (m *Ci) Alerts(
 		Stdout(ctx)
 }
 
-// Check is the single CI entrypoint: lint, test, boundaries, harness lock, Renovate config, alert rules, scan.
+// Eval scores the ERP diagnosis graph's fix selection on erp/eval/cases.json and fails below
+// --min (ADR 0011). It runs the scoring's own self-check first. With no --ollama it serves --model
+// on CPU from an Ollama container, after checking the pulled manifest against --digest. With
+// --ollama tcp://localhost:11434 it uses the host's server instead, which is how the 8B bar runs
+// on the GPU: dagger call eval --ollama tcp://localhost:11434 --model llama3.1:8b --min 0.65
+func (m *Ci) Eval(
+	ctx context.Context,
+	// +defaultPath="/erp"
+	// +ignore=["**/__pycache__"]
+	src *dagger.Directory,
+	// A running Ollama server to use instead of starting one. Its model is not digest-checked.
+	// +optional
+	ollama *dagger.Service,
+	// +optional
+	// +default="llama3.2:3b"
+	model string,
+	// sha256 of the model's manifest; checked only when this function pulls the model.
+	// +optional
+	// +default="a52a4a87c5affc63e344f4974f75bcc5b478b40e641df57d0f40941dfc406c94"
+	digest string,
+	// +optional
+	// +default=0.25
+	min float64,
+) (string, error) {
+	if ollama == nil {
+		name, tag, _ := strings.Cut(model, ":")
+		pulled := dag.Container().From(ollamaImage).
+			WithEnvVariable("M", model).
+			WithExec([]string{"sh", "-c", fmt.Sprintf(`set -e
+ollama serve >/dev/null 2>&1 & until ollama list >/dev/null 2>&1; do sleep 1; done
+ollama pull "$M" >/dev/null
+have=$(sha256sum /root/.ollama/models/manifests/registry.ollama.ai/library/%s/%s | cut -d' ' -f1)
+[ "$have" = %q ] || { echo "$M manifest is $have, pinned %s" >&2; exit 1; }`, name, tag, digest, digest)}).
+			Directory("/root/.ollama")
+		ollama = dag.Container().From(ollamaImage).
+			WithDirectory("/root/.ollama", pulled).
+			WithEnvVariable("OLLAMA_HOST", "0.0.0.0:11434").
+			WithExposedPort(11434).
+			AsService(dagger.ContainerAsServiceOpts{Args: []string{"ollama", "serve"}})
+	}
+	return evalSelfCheck(src).
+		// A loopback-bound Ollama (the host's) refuses Host headers that are not local-looking
+		// names; *.internal is one, as host.docker.internal is for the cluster.
+		WithServiceBinding("ollama.internal", ollama).
+		WithEnvVariable("AI_GATEWAY_URL", "http://ollama.internal:11434").
+		WithEnvVariable("DIAGNOSIS_ALIAS", model).
+		WithExec([]string{"python", "eval/run.py", "--min", fmt.Sprint(min)}).
+		Stdout(ctx)
+}
+
+// evalSelfCheck checks the eval's scoring against stand-in models, with no model and in seconds.
+func evalSelfCheck(src *dagger.Directory) *dagger.Container {
+	return dag.Container().From(pythonImage).
+		WithEnvVariable("PYTHONDONTWRITEBYTECODE", "1").
+		WithDirectory("/erp", src).WithWorkdir("/erp").
+		WithExec([]string{"pip", "install", "-q", "--no-cache-dir", "--require-hashes", "-r", "app/requirements.txt"}).
+		WithExec([]string{"python", "eval/run.py", "--self-check"})
+}
+
+// Check is the single CI entrypoint: lint, test, boundaries, harness lock, Renovate config, alert
+// rules, the eval's self-check, scan.
 func (m *Ci) Check(
 	ctx context.Context,
 	// +defaultPath="/"
@@ -264,6 +327,9 @@ func (m *Ci) Check(
 	g.Go(func() error { _, err := m.Harness(ctx, src.WithoutDirectory(".git")); return err })
 	g.Go(func() error { _, err := m.RenovateConfig(ctx, src.File("renovate.json5")); return err })
 	g.Go(func() error { _, err := m.Alerts(ctx, src.Directory("platform/telemetry")); return err })
+	// Only the eval's self-check: the 3B floor takes about 25 minutes on CPU, so it is its own
+	// workflow (.github/workflows/eval.yml), run when the prompt, graph or catalogue changes.
+	g.Go(func() error { _, err := evalSelfCheck(src.Directory("erp")).Sync(ctx); return err })
 	g.Go(func() error { return m.Scan(ctx, src) })
 	return g.Wait()
 }
