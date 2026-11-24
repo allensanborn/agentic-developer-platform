@@ -1,0 +1,28 @@
+# The eval gate's CI floor (ADR 0011): fix selection on erp/eval/cases.json with llama3.2:3b on
+# CPU, at least 0.25 (measured 0.333). It catches a broken prompt or output format, not a weaker
+# model; that bar is the host 8B (README). About 25 minutes on CPU, so it runs only when what it
+# scores changes, and `dagger call check` runs just the scoring's self-check.
+name: eval
+on:
+  pull_request:
+    paths:
+      - erp/app/**
+      - erp/eval/**
+      - platform/gateway/models.yaml
+      - .dagger/**
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: 0.21.11
+          verb: call
+          args: eval

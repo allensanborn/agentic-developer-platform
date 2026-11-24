@@ -2,6 +2,8 @@
 name: ci
 on:
   pull_request:
+  push:
+    branches: [main] # a merge is checked as merged, not only as the PR's head (adp-lcd)
   workflow_dispatch:
 permissions:
   contents: read
