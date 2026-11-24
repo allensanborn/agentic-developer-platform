@@ -9,17 +9,19 @@ GW=http://ai-gateway.ai-gateway.svc.cluster.local:8080
 CURL=curlimages/curl:8.21.0@sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13
 fails=0
 
-probe() { # namespace: a long-lived curl pod to exec into
-  kubectl run adp-smoke -n "$1" --image "$CURL" --restart=Never --overrides '{"spec":{
-    "automountServiceAccountToken":false,
+probe() { # namespace, [serviceaccount]: a long-lived curl pod to exec into, adp-smoke[-<sa>]
+  kubectl run "adp-smoke${2:+-$2}" -n "$1" --image "$CURL" --restart=Never --overrides '{"spec":{
+    "serviceAccountName":"'"${2:-default}"'","automountServiceAccountToken":false,
     "securityContext":{"runAsNonRoot":true,"runAsUser":10001,"seccompProfile":{"type":"RuntimeDefault"}},
     "containers":[{"name":"c","image":"'"$CURL"'","command":["sleep","900"],
       "securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' >/dev/null
-  kubectl wait -n "$1" pod/adp-smoke --for=condition=Ready --timeout=120s >/dev/null
+  kubectl wait -n "$1" "pod/adp-smoke${2:+-$2}" --for=condition=Ready --timeout=120s >/dev/null
 }
 cleanup() {
   for ns in agents default; do kubectl delete pod adp-smoke -n "$ns" --ignore-not-found >/dev/null 2>&1; done
   kubectl delete pod adp-smoke-gw -n ai-gateway --ignore-not-found >/dev/null 2>&1
+  kubectl delete pod adp-smoke-intern -n agents --ignore-not-found >/dev/null 2>&1
+  ! scripts/suspend.sh list | grep -qx agents/intern || scripts/suspend.sh off agents/intern >/dev/null
 }
 trap cleanup EXIT
 cleanup
@@ -98,6 +100,24 @@ check "a namespace without the client label cannot reach the gateway" 000 "$(sta
 check "agents cannot reach the local models directly" 000 "$(status agents http://ollama.models.svc.cluster.local:11434/api/tags)"
 check "agents cannot reach the host's model directly" 000 "$(status agents http://host.docker.internal:11434/api/version)"
 check "agents cannot reach the internet" 000 "$(status agents https://openrouter.ai)"
+
+echo "--- suspend one identity (ADR 0022)"
+# A pod running as intern, so the network half is tested on the identity's own pods.
+probe agents intern
+as_intern() { kubectl exec -n agents adp-smoke-intern -- curl -s -m 8 -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $intern" "$GW/v1/models" 2>/dev/null | tail -c 3; }
+check "before: intern's own pod reaches the gateway" 200 "$(as_intern)"
+scripts/suspend.sh on agents/intern >/dev/null
+read -r code _ <<<"$(chat "$intern" fast)"
+check "suspended: intern gets 403 on a model it may otherwise use" 403 "$code"
+check "suspended: intern's own pod reaches nothing" 000 "$(as_intern)"
+read -r code _ <<<"$(chat "$research" fast)"
+check "suspended: another identity is unaffected" 200 "$code"
+scripts/suspend.sh off agents/intern >/dev/null
+read -r code _ <<<"$(chat "$intern" fast)"
+check "resumed: intern may call fast again" 200 "$code"
+check "resumed: intern's own pod reaches the gateway" 200 "$(as_intern)"
+kubectl delete pod adp-smoke-intern -n agents --wait=false >/dev/null
 
 echo "--- gateway egress (ADR 0014)"
 # A curl pod with the gateway's policy label (not the Service's other labels, so it takes no
