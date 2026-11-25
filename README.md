@@ -63,7 +63,7 @@ sequenceDiagram
 
 ## Run it
 
-Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinned in `devbox.json`: `devbox shell`), and the Dagger CLI 0.21.11 for CI.
+Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinned in `devbox.json`: `devbox shell`), and the Dagger CLI 0.21.12 for CI.
 
 ```sh
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
