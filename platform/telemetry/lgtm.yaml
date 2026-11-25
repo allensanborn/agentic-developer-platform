@@ -55,6 +55,13 @@ spec:
             - {name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Viewer}
             - {name: GF_AUTH_DISABLE_LOGIN_FORM, value: "true"}
             - {name: GF_AUTH_BASIC_ENABLED, value: "false"}
+            # No internet (the egress policy below), so nothing that reaches grafana.com: the
+            # Drilldown apps it would download at start-up, update checks, usage reports. Each
+            # tried anyway, was dropped, and kept EgressPolicyDrop firing for this pod.
+            - {name: GF_PLUGINS_PREINSTALL_DISABLED, value: "true"}
+            - {name: GF_ANALYTICS_REPORTING_ENABLED, value: "false"}
+            - {name: GF_ANALYTICS_CHECK_FOR_UPDATES, value: "false"}
+            - {name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES, value: "false"}
             # A week of metrics. ponytail: Tempo and Loki keep the image's own retention; set
             # TEMPO_EXTRA_ARGS / LOKI_EXTRA_ARGS if the volume fills.
             - {name: PROMETHEUS_EXTRA_ARGS, value: "--storage.tsdb.retention.time=7d --storage.tsdb.retention.size=4GB"}
@@ -168,8 +175,8 @@ spec:
         - port: 4318
 ---
 # Out: DNS, the two scrape targets and Alertmanager. A CiliumNetworkPolicy, because the Cilium
-# agents run on the host network (the host/remote-node entities, ADR 0014). No internet: the
-# image's start-up download of a Grafana plugin fails and Grafana runs without it.
+# agents run on the host network (the host/remote-node entities, ADR 0014). No internet, and
+# Grafana is told not to try (the GF_ settings above).
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
