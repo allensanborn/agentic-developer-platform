@@ -15,7 +15,7 @@ The project has made no release, so every control that starts "when the project 
 | AC-03.01 No direct commits to the primary branch | Met | Repository ruleset `main`: changes need a pull request. No bypass actors. |
 | AC-03.02 Primary branch cannot be deleted | Met | Ruleset `main`: deletion and force-push are blocked. |
 | BR-01.01 Untrusted metadata is sanitized in CI | Met | [ci.yml](../.github/workflows/ci.yml) uses only commit SHAs from the event, passed through environment variables. |
-| BR-01.03 Untrusted code gets no privileged credentials | Met | CI runs on `pull_request` with `contents: read`, so a fork's pull request gets no secrets. Only the scheduled Renovate workflow, which runs from `main`, reads a secret. |
+| BR-01.03 Untrusted code gets no privileged credentials | Met | CI runs on `pull_request` with `contents: read`, so a fork's pull request gets no secrets. No workflow reads a secret. |
 | BR-03.01 Project channels are encrypted | Met | Every project URL is HTTPS on github.com. |
 | BR-03.02 Distribution channels are authenticated | Met | The only distribution channel is this Git repository, over HTTPS or SSH. |
 | BR-07.01 Secrets are kept out of version control | Met | GitHub secret scanning with push protection. gitleaks and Trivy in `dagger call check`. |
@@ -63,7 +63,7 @@ The project has made no release, so every control that starts "when the project 
 
 | Control | Status | Evidence |
 |---|---|---|
-| AC-04.02 Minimum job permissions | Met | Every job runs with `contents: read` only. Renovate's write access comes from a one-hour GitHub App token scoped to this repository. |
+| AC-04.02 Minimum job permissions | Met | Every job runs with `contents: read` only. |
 | BR-01.04 Trusted input is sanitized in CI | Met | `workflow_dispatch` takes no inputs. |
 | BR-02.02 Assets tied to a release identifier | N/A | No release. |
 | BR-07.02 Secrets policy | Met | [SECURITY.md](../SECURITY.md), "Secrets and credentials". |

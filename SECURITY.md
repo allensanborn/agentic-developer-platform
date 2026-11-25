@@ -22,10 +22,10 @@ The platform runs on a local k3d cluster. [docs/threat-model.md](docs/threat-mod
 
 ## Secrets and credentials
 
-- **Storage.** No secret or credential is committed. Model-provider API keys live in AWS Secrets Manager (emulated locally by floci), and External Secrets delivers them to the gateway ([ADR 0003](docs/adr/0003-provider-keys-in-secrets-manager.md)). The only write path is `scripts/provider-key.sh`, which reads the key from stdin. CI credentials are GitHub Actions secrets. The Renovate workflow reads a GitHub App private key from `RENOVATE_APP_PRIVATE_KEY` and mints a one-hour token scoped to this repository on each run.
+- **Storage.** No secret or credential is committed. Model-provider API keys live in AWS Secrets Manager (emulated locally by floci), and External Secrets delivers them to the gateway ([ADR 0003](docs/adr/0003-provider-keys-in-secrets-manager.md)). The only write path is `scripts/provider-key.sh`, which reads the key from stdin. CI holds no credentials beyond the per-run `GITHUB_TOKEN`.
 - **Detection.** GitHub secret scanning and push protection are on. `dagger call check` runs gitleaks over the full history and Trivy's secret scanner on every pull request.
 - **Access.** Only the maintainer can read or change repository settings and Actions secrets. Callers of the gateway never hold a provider key. They authenticate with projected ServiceAccount tokens ([ADR 0002](docs/adr/0002-workload-identity-for-callers.md)).
-- **Rotation.** A credential that reaches a commit, a log or an issue is revoked at its issuer the same day. Removing it from history is not enough. Provider keys rotate with `scripts/provider-key.sh` and need no redeploy. Long-lived credentials, the GitHub App key included, are rotated at least once a year.
+- **Rotation.** A credential that reaches a commit, a log or an issue is revoked at its issuer the same day. Removing it from history is not enough. Provider keys rotate with `scripts/provider-key.sh` and need no redeploy. Long-lived credentials are rotated at least once a year.
 
 ## Dependency and static-analysis findings
 
