@@ -700,7 +700,7 @@ entries:
     records:
     - kind: file
       path: versions.env
-      line: 20
+      line: 25
       sha256: 0cfcb67d334612fed47ab4f1a949eeefe223f1324d4d72871552c15f2c1b832d
   - party: gateway
     role: consumes
@@ -722,7 +722,7 @@ entries:
     records:
     - kind: file
       path: versions.env
-      line: 23
+      line: 28
       sha256: 0cfcb67d334612fed47ab4f1a949eeefe223f1324d4d72871552c15f2c1b832d
   - party: gateway
     role: consumes
