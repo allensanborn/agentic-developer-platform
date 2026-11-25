@@ -1,0 +1,10 @@
+# SPIRE (ADR 0025): every pod outside SPIRE's own namespaces gets
+# spiffe://adp.local/ns/<namespace>/sa/<serviceaccount>, through the CSI driver's Workload API
+# socket. Phase 1: issued, not yet used by any caller.
+global:
+  spire:
+    clusterName: adp
+    trustDomain: adp.local
+# Federation and JWT-SVID verification by outside parties; nothing here needs it.
+spiffe-oidc-discovery-provider:
+  enabled: false

@@ -56,6 +56,7 @@ sequenceDiagram
 | The gateway cannot be bypassed | Default-deny NetworkPolicy: agents reach the gateway and nothing else; only the gateway reaches models | `smoke.sh`: three blocked paths |
 | Key rotation without redeploys | `scripts/provider-key.sh` writes Secrets Manager; External Secrets refreshes every minute | Checked by hand: new value reached the gateway in about 45 s |
 | Agent work survives crashes | Dapr Workflow; model calls are recorded activities; state in DynamoDB behind Dapr's state API | `smoke.sh`: workflow completes |
+| Workload identity and node encryption | SPIRE issues every pod an X.509 SVID for its ServiceAccount; Cilium WireGuard encrypts traffic between nodes (ADR 0025, phase 1: not yet used by callers) | `smoke.sh`: a tenant pod receives its SVID; every node's tunnel has its peers |
 | Hardened workloads | Pod Security `restricted` on every namespace we own; non-root, read-only root filesystem, no capabilities, no API token | Enforced by admission |
 | One trace per agent run | The agent opens a span per workflow run and per activity and sends `traceparent`; the gateway exports a span per model and tool call with the caller's `jwt.sub`, tokens, model and the endpoint that answered (Tempo in the otel-lgtm stack, `platform/telemetry/`); its access log goes to Loki with the same trace id | `smoke.sh`: one run is one trace across both; every gateway call nests under an agent span; the run's access log is in Loki |
 | Fences are checked between smoke runs | A CronJob probes identity, entitlement and egress every 5 minutes, deny and allow side by side; a failed or missing report is an alert (ADR 0021) | `smoke.sh`: the probe passes, then fails and alerts with its network policies removed |
@@ -67,7 +68,7 @@ Needs Docker with about 8 GB free, plus `k3d`, `kubectl`, `helm` and `jq` (pinne
 
 ```sh
 scripts/up.sh                       # cluster + platform, about 5 minutes cold; safe to re-run
-scripts/smoke.sh                    # 49 end-to-end security checks (one skips without a host model)
+scripts/smoke.sh                    # 51 end-to-end security checks (one skips without a host model)
 scripts/suspend.sh on agents/intern # cut one identity off: 403 at the gateway, no egress (ADR 0022); off to undo
 scripts/provider-key.sh openrouter  # optional: set a real hosted-provider key (prompts)
 dagger call check                   # lint, unit tests, boundary register, harness lock, Renovate config, alert rules, eval self-check, secret/misconfig/vulnerability scans
