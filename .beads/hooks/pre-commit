@@ -57,3 +57,19 @@ if command -v bd >/dev/null 2>&1; then
   if [ "$_bd_exit" -ne 0 ]; then exit "$_bd_exit"; fi
 fi
 # --- END BEADS INTEGRATION v1.3.4 ---
+
+# A staged edit to a file boundary_register.yaml cites must refresh the register in the same
+# commit, or CI's Boundaries check fails after the push. Runs the same Dagger function as CI,
+# and only when a cited file is staged. Skip once with ADP_SKIP_BOUNDARY_HOOK=1.
+# ponytail: checks the working tree, not the index; a refresh left unstaged passes here and
+# fails in CI. Check the index (git stash --keep-index) if that bites.
+if [ -z "${ADP_SKIP_BOUNDARY_HOOK:-}" ] && [ -f boundary_register.yaml ] && command -v dagger >/dev/null 2>&1; then
+  cited=$(sed -n 's/^ *path: //p' boundary_register.yaml | sort -u)
+  if git diff --cached --name-only | grep -qxF "$cited" 2>/dev/null ||
+    git diff --cached --name-only | grep -qx boundary_register.yaml; then
+    if ! dagger -s call boundaries >/dev/null 2>&1; then
+      echo >&2 "boundary register is stale for a staged file: run python tools/boundary/boundary.py refresh, stage boundary_register.yaml"
+      exit 1
+    fi
+  fi
+fi
