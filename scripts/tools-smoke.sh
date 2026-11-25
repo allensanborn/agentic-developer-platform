@@ -18,7 +18,10 @@ probe() { # namespace: a long-lived curl pod to exec into
       "securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' >/dev/null
   kubectl wait -n "$1" pod/tools-smoke --for=condition=Ready --timeout=120s >/dev/null
 }
-cleanup() { for ns in agents default; do kubectl delete pod tools-smoke -n "$ns" --ignore-not-found >/dev/null 2>&1; done; }
+cleanup() {
+  for ns in agents default; do kubectl delete pod tools-smoke -n "$ns" --ignore-not-found >/dev/null 2>&1; done
+  ! scripts/suspend.sh list | grep -qx agents/intern || scripts/suspend.sh off agents/intern >/dev/null
+}
 trap cleanup EXIT
 cleanup
 probe agents; probe default
@@ -68,6 +71,13 @@ echo "--- which tools each identity can see"
 check "research-agent sees lookup_order and initiate_return" "initiate_return lookup_order" "$(tools "$research")"
 check "intern sees lookup_order only" "lookup_order" "$(tools "$intern")"
 echo "      check_inventory is in neither list: no rule allows it"
+
+echo "--- a suspended identity (ADR 0022)"
+scripts/suspend.sh on agents/intern >/dev/null
+check "suspended: intern is refused on the tools listener" 403 "$(status agents $MCP "$intern")"
+check "suspended: research-agent still sees its tools" "initiate_return lookup_order" "$(tools "$research")"
+scripts/suspend.sh off agents/intern >/dev/null
+check "resumed: intern sees lookup_order again" "lookup_order" "$(tools "$intern")"
 
 echo "--- calling tools (the workshop's server.py, reading DynamoDB on floci)"
 check "lookup_order reads the order from the table" "Jane Doe shipped" \

@@ -500,7 +500,7 @@ entries:
     - kind: file
       path: scripts/tools-smoke.sh
       line: 9
-      sha256: f7b49c77fdef30be16075c82223372f3b4823a95c77ad8277202cf87bb3e233d
+      sha256: ae611bce4afc347565fc3cc03f7df72b794fdee0dfde8494ddf1cc31d0c67883
   - party: sandbox-smoke
     role: consumes
     value: '8081'
