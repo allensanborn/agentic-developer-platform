@@ -39,4 +39,4 @@ The script prints what it changed and what is still running. It does not delete 
 - **Workflow: not built.** The agent treats a gateway 403 as final (`agent/app.py:77`), so a run that calls the gateway while its identity is suspended fails, and its state stays in the store for review. Pausing first would keep such runs alive, but the cutoff would then wait on finding the identity's running instances, which Dapr 1.19 may not offer (unverified). Decided: the cutoff comes first.
 - **Visible:** a suspended identity that keeps trying fires `GatewayCallerDenied` (any 403) and, from its pods, `EgressPolicyDrop` (ADR 0016). A suspension nobody trips raises nothing; `suspend.sh list` shows it.
 - Proof, in `smoke.sh`: before, during and after suspending `intern`, from a pod running as `intern` and from the shared probe.
-- The `mcp` listener is covered by the same Gateway-wide policy, but no smoke check exercises it (the tools stage is opt-in).
+- The `mcp` listener is covered by the same Gateway-wide policy: `tools-smoke.sh` suspends `intern`, sees it refused there while `research-agent` still lists its tools, and resumes it.
