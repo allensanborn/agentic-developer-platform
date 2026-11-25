@@ -24,6 +24,7 @@ The options weighed were TLS on the listeners with a local CA, Cilium WireGuard 
   | Plain HTTP to the port | fails |
 
 - **Clients need no new library.** Python's `ssl` plus `urllib` (what the agents use) loads the SVID and verifies the gateway against the SPIRE bundle. Hostname checking is off, since SVIDs carry a SPIFFE URI rather than a DNS name, and the client can check the gateway's SPIFFE ID from the peer certificate instead.
+- **Rotation needs no app change beyond reading files per call.** A `spiffe-helper` v0.12.3 native sidecar (an init container with `restartPolicy: Always`, under `restricted`) writes `svid.pem`, `svid_key.pem` and `bundle.pem` and rewrites them on renewal. The app rebuilt its `ssl` context from those files on every call, as the agents re-read their token file today. With SVIDs shortened to 4 minutes (spike only), the client's SVID rotated twice and the gateway's once over 5.5 minutes, and all 11 calls returned 200, including the first one after the gateway rotated.
 - **Cost:** about 180 MiB across two nodes (server 65, agent about 28 per node, CSI driver about 23 per node, OIDC discovery provider 14, which isn't needed). SVIDs live 4 hours.
 
 ## Decision (proposed)
@@ -34,7 +35,6 @@ The options weighed were TLS on the listeners with a local CA, Cilium WireGuard 
 
 ## Open before building
 
-- **Rotation.** The spike fetched one SVID in an init container, and that SVID expires after 4 hours. Apps need a refreshed copy: a `spiffe-helper` native sidecar writing the files, which the apps re-read on every call as they do the token today, or the Workload API from the app. Neither was tried.
 - **Gateway outbound mTLS** (`backendTLS` SPIFFE) to MCP servers and the sandbox broker. Not tried; Ollama has no TLS, so those hops rely on WireGuard and then only cross-node.
 - **Metrics and logs keyed on `jwt.sub`** (rate limit, `caller` label, alerts, dashboard) need the SPIFFE ID instead. Untested: whether the rate limit can key on `source.spiffeId`.
 - **The fence probe and smoke scripts** call the gateway with `kubectl create token`. They'll need SVIDs, which means probe pods with the CSI volume.
