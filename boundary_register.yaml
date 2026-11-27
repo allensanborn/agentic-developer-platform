@@ -367,8 +367,8 @@ entries:
     records:
     - kind: file
       path: scripts/up.sh
-      line: 74
-      sha256: 55145581e82b5e1a9d410aef73fa6674ca01ea4af53331aa353ae1637ebfb06e
+      line: 80
+      sha256: 55faa055aac3e901706129cfd022b22a1da86764b72e253800ea808ca4c68c52
   - party: secrets
     role: consumes
     value: adp/providers/openrouter
@@ -700,8 +700,8 @@ entries:
     records:
     - kind: file
       path: versions.env
-      line: 20
-      sha256: 0cfcb67d334612fed47ab4f1a949eeefe223f1324d4d72871552c15f2c1b832d
+      line: 25
+      sha256: b0d7b23b60af174264fa2a9c2f359f1c2c0d45a7918f3ab6821b761ece61c670
   - party: gateway
     role: consumes
     value: llama3.2:3b
@@ -722,8 +722,8 @@ entries:
     records:
     - kind: file
       path: versions.env
-      line: 23
-      sha256: 0cfcb67d334612fed47ab4f1a949eeefe223f1324d4d72871552c15f2c1b832d
+      line: 28
+      sha256: b0d7b23b60af174264fa2a9c2f359f1c2c0d45a7918f3ab6821b761ece61c670
   - party: gateway
     role: consumes
     value: llama3.1:8b

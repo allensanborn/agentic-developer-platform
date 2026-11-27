@@ -3,6 +3,14 @@ operator:
   replicas: 1
 ipam:
   mode: kubernetes
+# Transparent encryption between nodes (ADR 0025). Pod-to-pod traffic on one node does not go
+# through it, measured on k3d: agent -> gateway needs its own TLS, which SPIRE's SVIDs provide.
+encryption:
+  enabled: true
+  type: wireguard
+# Roll the agents when cilium-config changes. Without it, turning encryption on in an upgrade
+# left one node encrypting and the other not, and cross-node traffic dropped until both restarted.
+rollOutCiliumPods: true
 hubble:
   enabled: true # drop records: the blocked-egress signal
   metrics:

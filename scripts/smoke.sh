@@ -7,6 +7,7 @@ set -uo pipefail
 
 GW=http://ai-gateway.ai-gateway.svc.cluster.local:8080
 CURL=curlimages/curl:8.21.0@sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13
+SPIRE_AGENT_IMAGE=ghcr.io/spiffe/spire-agent:1.16.0@sha256:ab3a8ce70435374cc5d84c81eabf0278dc046ddbc0a736d59694ba9e5975b1b6
 fails=0
 
 probe() { # namespace, [serviceaccount]: a long-lived curl pod to exec into, adp-smoke[-<sa>]
@@ -144,6 +145,37 @@ check "the gateway cannot reach the internet by IP" 000 "$(gw_status https://1.1
 # That Cilium recorded these drops is checked under "detections": EgressPolicyDrop counts them
 # from hubble_drop_total, which does not depend on Hubble's small per-node flow buffer.
 kubectl delete pod adp-smoke-gw -n ai-gateway --wait=false >/dev/null
+
+echo "--- workload identity and node encryption (ADR 0025, phase 1)"
+nodes=$(kubectl get nodes --no-headers | wc -l | tr -d ' ')
+peers=$(for p in $(kubectl get pod -n kube-system -l k8s-app=cilium -o name); do
+  kubectl exec -n kube-system "$p" -c cilium-agent -- cilium-dbg encrypt status 2>/dev/null | awk '/Number of peers/ {print $NF}'
+done | xargs)
+check "every node's WireGuard tunnel has a peer for each other node" "$(yes "$((nodes - 1))" | head -n "$nodes" | xargs)" "$peers"
+# A pod in a tenant namespace (restricted, default-deny) fetches its SVID from the CSI socket.
+kubectl delete pod adp-smoke-svid -n agents --ignore-not-found >/dev/null
+kubectl apply -f - >/dev/null <<YAML
+apiVersion: v1
+kind: Pod
+metadata: {name: adp-smoke-svid, namespace: agents}
+spec:
+  serviceAccountName: research-agent
+  automountServiceAccountToken: false
+  restartPolicy: Never
+  securityContext: {runAsNonRoot: true, runAsUser: 10001, seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: c
+      image: $SPIRE_AGENT_IMAGE
+      command: [/opt/spire/bin/spire-agent]
+      args: [api, fetch, x509, -socketPath, /spiffe-workload-api/spire-agent.sock]
+      securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, readOnlyRootFilesystem: true}
+      volumeMounts: [{name: spiffe, mountPath: /spiffe-workload-api, readOnly: true}]
+  volumes: [{name: spiffe, csi: {driver: csi.spiffe.io, readOnly: true}}]
+YAML
+kubectl wait -n agents pod/adp-smoke-svid --for=jsonpath='{.status.phase}'=Succeeded --timeout=120s >/dev/null 2>&1
+check "a tenant pod receives the SVID for its ServiceAccount" spiffe://adp.local/ns/agents/sa/research-agent \
+  "$(kubectl logs -n agents adp-smoke-svid 2>/dev/null | awk '/^SPIFFE ID:/ {print $3; exit}')"
+kubectl delete pod adp-smoke-svid -n agents --wait=false >/dev/null
 
 echo "--- credentials"
 check "the provider key exists only in the gateway namespace" 1 \

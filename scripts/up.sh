@@ -24,6 +24,12 @@ done
 h cilium cilium --repo https://helm.cilium.io --version "$CILIUM_VERSION" \
   -n kube-system -f platform/helm/cilium.yaml
 kubectl wait --for=condition=Ready node --all --timeout=5m
+# SPIRE (ADR 0025): workload identity as X.509 SVIDs. Before the workloads, so each pod's
+# registration entry exists by the time a caller asks for its SVID.
+h spire-crds spire-crds --repo https://spiffe.github.io/helm-charts-hardened \
+  --version "$SPIRE_CRDS_VERSION" -n spire-mgmt --create-namespace
+h spire spire --repo https://spiffe.github.io/helm-charts-hardened \
+  --version "$SPIRE_VERSION" -n spire-mgmt -f platform/helm/spire.yaml
 
 # CRDs before the control planes that watch them.
 kubectl apply --server-side -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/$GATEWAY_API_VERSION/standard-install.yaml"
