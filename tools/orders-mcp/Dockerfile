@@ -1,6 +1,8 @@
 # The workshop's MCP server (lab 3), unchanged: server.py is upstream's file byte for byte.
 # boto3 reads AWS_ENDPOINT_URL, so pointing it at floci instead of AWS is deployment config.
 FROM python:3.13-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72
+# Debian security fixes reach bookworm before the next python image does (CVE-2025-6020, libpam).
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY requirements.txt .
